@@ -13,18 +13,18 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS channels (
     name TEXT PRIMARY KEY,
     topic TEXT,
-    purpose TEXT,
+    purpose TEXT
 );
 
 
 CREATE TABLE IF NOT EXISTS messages (
     channel_name TEXT NOT NULL,
-    user TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     ts TEXT NOT NULL,
-    text TEXT NOT NULL,
+    msg_text TEXT NOT NULL,
     thread_ts TEXT,
     parent_user_id TEXT,
-    PRIMARY KEY (user, ts),
-    FOREIGN KEY (user) REFERENCES users(id),
+    PRIMARY KEY (user_id, ts),
+    FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (channel_name) REFERENCES channels(name)
 );
