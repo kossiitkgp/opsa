@@ -49,6 +49,10 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=${TUMMY_HOST} 
+    networks:
+      digestive-tract:
+        aliases:
+          - mouth
 
 networks:
   digestive-tract:
