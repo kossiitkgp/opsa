@@ -8,13 +8,22 @@ services:
       - POSTGRES_DB=tummy
       - PGPORT=${TUMMY_PORT}
       - PGHOST=${TUMMY_HOST}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       digestive-tract:
         aliases:
           - tummy
+
   excretor:
     build: "./excretor"
     restart: always
+    depends_on:
+      tummy:
+        condition: service_healthy
     environment:
       - TUMMY_USERNAME=${TUMMY_USERNAME}
       - TUMMY_PASSWORD=${TUMMY_PASSWORD}
@@ -26,6 +35,19 @@ services:
         aliases:
           - excretor
 
+  digester:
+    build: "./digester"
+    profile: ["digest"]
+    depends_on:
+      tummy:
+        condition: service_healthy
+    environment:
+      - TUMMY_USERNAME=${TUMMY_USERNAME}
+      - TUMMY_PASSWORD=${TUMMY_PASSWORD}
+      - TUMMY_DB=tummy
+      - TUMMY_PORT=${TUMMY_PORT}
+      - TUMMY_HOST=${TUMMY_HOST} 
+    depends_on: tummy
 networks:
   digestive-tract:
     name: digestive-tract
