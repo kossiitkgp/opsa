@@ -9,6 +9,8 @@ services:
       - POSTGRES_DB=tummy
       - PGPORT=${TUMMY_PORT}
       - PGHOST=${TUMMY_HOST}
+    volumes:
+      - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -48,7 +50,7 @@ services:
       - TUMMY_PASSWORD=${TUMMY_PASSWORD}
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=${TUMMY_HOST} 
+      - TUMMY_HOST=${TUMMY_HOST}
     networks:
       digestive-tract:
         aliases:
