@@ -1,0 +1,31 @@
+services:
+  tummy:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${TUMMY_USERNAME}
+      - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
+      - POSTGRES_DB=tummy
+      - PGPORT=${TUMMY_PORT}
+      - PGHOST=${TUMMY_HOST}
+    networks:
+      digestive-tract:
+        aliases:
+          - tummy
+  excretor:
+    build: "./excretor"
+    restart: always
+    environment:
+      - TUMMY_USERNAME=${TUMMY_USERNAME}
+      - TUMMY_PASSWORD=${TUMMY_PASSWORD}
+      - TUMMY_DB=tummy
+      - TUMMY_PORT=${TUMMY_PORT}
+      - TUMMY_HOST=${TUMMY_HOST}
+    networks:
+      digestive-tract:
+        aliases:
+          - excretor
+
+networks:
+  digestive-tract:
+    name: digestive-tract
