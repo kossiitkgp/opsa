@@ -11,6 +11,7 @@ services:
       - PGHOST=${TUMMY_HOST}
     volumes:
       - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - food:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -59,3 +60,6 @@ services:
 networks:
   digestive-tract:
     name: digestive-tract
+
+volumes:
+  food:
