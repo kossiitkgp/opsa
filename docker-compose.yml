@@ -1,6 +1,7 @@
 services:
   tummy:
     image: postgres
+    profiles: ["digest", "excrete"]
     restart: always
     environment:
       - POSTGRES_USER=${TUMMY_USERNAME}
@@ -20,6 +21,7 @@ services:
 
   excretor:
     build: "./excretor"
+    profiles: ["excrete"]
     restart: always
     depends_on:
       tummy:
@@ -37,7 +39,7 @@ services:
 
   digester:
     build: "./digester"
-    profile: ["digest"]
+    profiles: ["digest"]
     depends_on:
       tummy:
         condition: service_healthy
@@ -47,7 +49,7 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=${TUMMY_HOST} 
-    depends_on: tummy
+
 networks:
   digestive-tract:
     name: digestive-tract
