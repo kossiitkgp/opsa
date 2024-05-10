@@ -2,9 +2,11 @@ FROM golang:1.22.3-alpine
 
 WORKDIR /app
 
+RUN apk add build-base
+
 COPY . /app
 
-RUN apk add build-base
+RUN go mod download
 
 RUN go build -o app ./main.go
 

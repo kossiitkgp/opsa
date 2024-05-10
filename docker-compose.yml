@@ -8,7 +8,7 @@ services:
       - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
       - POSTGRES_DB=tummy
       - PGPORT=${TUMMY_PORT}
-      - PGHOST=${TUMMY_HOST}
+      - PGHOST=tummy
     volumes:
       - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
       - food:/var/lib/postgresql/data
@@ -34,7 +34,7 @@ services:
       - TUMMY_PASSWORD=${TUMMY_PASSWORD}
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=${TUMMY_HOST}
+      - TUMMY_HOST=tummy
     networks:
       digestive-tract:
         aliases:
