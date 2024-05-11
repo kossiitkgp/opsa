@@ -43,6 +43,7 @@ type Message struct {
 	Channel      string
 	UserID       string `json:"user"`
 	BotID        string `json:"bot_id"`
+	BotUsername  string `json:"username"`
 	TS           string `json:"ts"`
 	Text         string `json:"text"`
 	ThreadTS     string `json:"thread_ts"`
@@ -55,7 +56,6 @@ const (
 	USERS_FILENAME    = "users.json"
 	CHANNELS_FILENAME = "channels.json"
 	SLACKBOT_ID       = "USLACKBOT"
-	IMAGERY_ID        = "B9SFUPW5D"
 )
 
 var db *sql.DB
@@ -170,21 +170,13 @@ func main() {
 	slackbot.Profile.RealName = "Slackbot"
 	users = append(users, slackbot)
 
-	// Add imagery as a user
-	imagery := User{
-		ID:      IMAGERY_ID,
-		Name:    "imagery",
-		Deleted: false,
-		IsBot:   true,
-	}
-	imagery.Profile.DisplayName = "Imagery"
-	imagery.Profile.RealName = "Imagery"
-	users = append(users, imagery)
+	userIDSet := make(map[string]bool)
 
 	for _, user := range users {
 		query := "INSERT INTO users (id, name, real_name, display_name, email, deleted, is_bot, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
 		_, err = db.Exec(query, user.ID, user.Name, user.Profile.RealName, user.Profile.DisplayName, user.Profile.Email, user.Deleted, user.IsBot, user.Profile.ImageURL)
 		CheckError(err)
+		userIDSet[user.ID] = true
 	}
 	log.Println("Digester sent users to the tummy.")
 
@@ -227,10 +219,29 @@ func main() {
 			for _, message := range messages {
 				message.Channel = channel.Name
 				if message.UserID == "" {
-					if message.BotID != IMAGERY_ID {
+					if message.BotID == "" {
 						continue
 					} else {
-						message.UserID = message.BotID
+						if userIDSet[message.BotID] {
+							message.UserID = message.BotID
+						} else {
+							newBot := User{
+								ID:      message.BotID,
+								Name:    message.BotUsername,
+								Deleted: false,
+								IsBot:   true,
+							}
+							newBot.Profile.DisplayName = message.BotUsername
+							newBot.Profile.RealName = message.BotUsername
+							users = append(users, newBot)
+
+							query := "INSERT INTO users (id, name, real_name, display_name, email, deleted, is_bot, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
+							_, err = db.Exec(query, newBot.ID, newBot.Name, newBot.Profile.RealName, newBot.Profile.DisplayName, newBot.Profile.Email, newBot.Deleted, newBot.IsBot, newBot.Profile.ImageURL)
+							CheckError(err)
+							userIDSet[newBot.ID] = true
+
+							message.UserID = message.BotID
+						}
 					}
 				}
 
