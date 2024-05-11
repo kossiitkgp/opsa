@@ -168,7 +168,7 @@ func main() {
 	var channels []Channel
 	err = json.Unmarshal(channelsFile, &channels)
 	CheckError(err)
-	log.Println("DIgester found " + fmt.Sprint(len(channels)) + " channels.")
+	log.Println("Digester found " + fmt.Sprint(len(channels)) + " channels.")
 
 	for _, channel := range channels {
 		query := "INSERT INTO channels (name, topic, purpose) VALUES ($1, $2, $3)"
