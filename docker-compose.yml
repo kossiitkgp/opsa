@@ -51,7 +51,7 @@ services:
       - TUMMY_PASSWORD=${TUMMY_PASSWORD}
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=${TUMMY_HOST}
+      - TUMMY_HOST=tummy
     networks:
       digestive-tract:
         aliases:
