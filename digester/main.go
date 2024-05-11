@@ -156,10 +156,24 @@ func main() {
 	CheckError(err)
 	log.Println("Digester found " + fmt.Sprint(len(users)) + " users.")
 
+	for _, user := range users {
+		query := "INSERT INTO users (id, name, real_name, display_name, email, deleted, is_bot, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
+		_, err = db.Exec(query, user.ID, user.Name, user.Profile.RealName, user.Profile.DisplayName, user.Profile.Email, user.Deleted, user.IsBot, user.Profile.ImageURL)
+		CheckError(err)
+	}
+	log.Println("Digester sent users to the tummy.")
+
 	channelsFile, err := os.ReadFile(EXTRACTION_DIR + string(os.PathSeparator) + CHANNELS_FILENAME)
 	CheckError(err)
-	var channels []User
+	var channels []Channel
 	err = json.Unmarshal(channelsFile, &channels)
 	CheckError(err)
 	log.Println("DIgester found " + fmt.Sprint(len(channels)) + " channels.")
+
+	for _, channel := range channels {
+		query := "INSERT INTO channels (name, topic, purpose) VALUES ($1, $2, $3)"
+		_, err = db.Exec(query, channel.Name, channel.Topic.Value, channel.Purpose.Value)
+		CheckError(err)
+	}
+	log.Println("Digester sent channels to the tummy.")
 }
