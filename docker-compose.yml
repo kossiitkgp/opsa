@@ -52,6 +52,9 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=tummy
+      - ZIPFILE_PATH=${ZIPFILE_PATH}
+    volumes:
+      - ${ZIPFILE_PATH}:/slack-export.zip
     networks:
       digestive-tract:
         aliases:
