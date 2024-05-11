@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -15,9 +16,43 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type User struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Profile struct {
+		RealName    string `json:"real_name"`
+		DisplayName string `json:"display_name"`
+		Email       string `json:"email"`
+		ImageURL    string `json:"image_192"`
+	} `json:"profile"`
+	Deleted bool `json:"deleted"`
+	IsBot   bool `json:"is_bot"`
+}
+
+type Channel struct {
+	Name  string `json:"name"`
+	Topic struct {
+		Value string `json:"value"`
+	} `json:"topic"`
+	Purpose struct {
+		Value string `json:"value"`
+	} `json:"purpose"`
+}
+
+type Message struct {
+	Channel      string
+	UserID       string `json:"user"`
+	TS           string `json:"ts"`
+	Text         string `json:"text"`
+	ThreadTS     string `json:"thread_ts"`
+	ParentUserID string `json:"parent_user_id"`
+}
+
 const (
-	ZIPFILE_PATH   = "/slack-export.zip"
-	EXTRACTION_DIR = "/extracted"
+	ZIPFILE_PATH      = "/slack-export.zip"
+	EXTRACTION_DIR    = "/extracted"
+	USERS_FILENAME    = "users.json"
+	CHANNELS_FILENAME = "channels.json"
 )
 
 var db *sql.DB
@@ -113,4 +148,18 @@ func main() {
 	err = unzipSource(ZIPFILE_PATH, EXTRACTION_DIR)
 	CheckError(err)
 	log.Println("Slack export has been successfully extracted!")
+
+	usersFile, err := os.ReadFile(EXTRACTION_DIR + string(os.PathSeparator) + USERS_FILENAME)
+	CheckError(err)
+	var users []User
+	err = json.Unmarshal(usersFile, &users)
+	CheckError(err)
+	log.Println("Digester found " + fmt.Sprint(len(users)) + " users.")
+
+	channelsFile, err := os.ReadFile(EXTRACTION_DIR + string(os.PathSeparator) + CHANNELS_FILENAME)
+	CheckError(err)
+	var channels []User
+	err = json.Unmarshal(channelsFile, &channels)
+	CheckError(err)
+	log.Println("DIgester found " + fmt.Sprint(len(channels)) + " channels.")
 }

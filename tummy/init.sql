@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL,
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
     is_bot BOOLEAN NOT NULL DEFAULT FALSE,
-    IMAGE_url TEXT
+    image_url TEXT
 );
 
 
