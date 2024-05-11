@@ -42,6 +42,7 @@ type Channel struct {
 type Message struct {
 	Channel      string
 	UserID       string `json:"user"`
+	BotID        string `json:"bot_id"`
 	TS           string `json:"ts"`
 	Text         string `json:"text"`
 	ThreadTS     string `json:"thread_ts"`
@@ -53,6 +54,8 @@ const (
 	EXTRACTION_DIR    = "/extracted"
 	USERS_FILENAME    = "users.json"
 	CHANNELS_FILENAME = "channels.json"
+	SLACKBOT_ID       = "USLACKBOT"
+	IMAGERY_ID        = "B9SFUPW5D"
 )
 
 var db *sql.DB
@@ -156,6 +159,28 @@ func main() {
 	CheckError(err)
 	log.Println("Digester found " + fmt.Sprint(len(users)) + " users.")
 
+	// Add slackbot as a user
+	slackbot := User{
+		ID:      SLACKBOT_ID,
+		Name:    "slackbot",
+		Deleted: false,
+		IsBot:   true,
+	}
+	slackbot.Profile.DisplayName = "Slackbot"
+	slackbot.Profile.RealName = "Slackbot"
+	users = append(users, slackbot)
+
+	// Add imagery as a user
+	imagery := User{
+		ID:      IMAGERY_ID,
+		Name:    "imagery",
+		Deleted: false,
+		IsBot:   true,
+	}
+	imagery.Profile.DisplayName = "Imagery"
+	imagery.Profile.RealName = "Imagery"
+	users = append(users, imagery)
+
 	for _, user := range users {
 		query := "INSERT INTO users (id, name, real_name, display_name, email, deleted, is_bot, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
 		_, err = db.Exec(query, user.ID, user.Name, user.Profile.RealName, user.Profile.DisplayName, user.Profile.Email, user.Deleted, user.IsBot, user.Profile.ImageURL)
@@ -176,4 +201,48 @@ func main() {
 		CheckError(err)
 	}
 	log.Println("Digester sent channels to the tummy.")
+
+	totalMessagesCount := 0
+	totalMessagesAddedCount := 0
+	for _, channel := range channels {
+		messagesDirPath := EXTRACTION_DIR + string(os.PathSeparator) + channel.Name
+		messageFiles, err := os.ReadDir(messagesDirPath)
+		CheckError(err)
+
+		for _, messageFile := range messageFiles {
+			if messageFile.Name() == "canvas_in_the_conversation.json" {
+				continue
+			}
+
+			messageFilePath := messagesDirPath + string(os.PathSeparator) + messageFile.Name()
+			messagesFile, err := os.ReadFile(messageFilePath)
+			CheckError(err)
+
+			var messages []Message
+			err = json.Unmarshal(messagesFile, &messages)
+			CheckError(err)
+
+			totalMessagesCount += len(messages)
+
+			for _, message := range messages {
+				message.Channel = channel.Name
+				if message.UserID == "" {
+					if message.BotID != IMAGERY_ID {
+						continue
+					} else {
+						message.UserID = message.BotID
+					}
+				}
+
+				query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, thread_ts, parent_user_id) VALUES ($1, $2, $3, $4, $5, $6)"
+				_, err = db.Exec(query, message.Channel, message.UserID, message.TS, message.Text, message.ThreadTS, message.ParentUserID)
+				if err != nil {
+					log.Println(message)
+				}
+				CheckError(err)
+				totalMessagesAddedCount++
+			}
+		}
+	}
+	log.Println("Digester found and sent " + fmt.Sprint(totalMessagesAddedCount) + "/" + fmt.Sprint(totalMessagesCount) + " messages to the tummy.")
 }
