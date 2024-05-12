@@ -47,12 +47,7 @@ async fn root() -> (StatusCode, Response) {
 
     (
         StatusCode::OK,
-        Html(
-            templates::IndexTemplate { channels: channels }
-                .render()
-                .unwrap(),
-        )
-        .into_response(),
+        Html(templates::IndexTemplate { channels }.render().unwrap()).into_response(),
     )
 }
 
@@ -83,7 +78,7 @@ async fn get_messages(
             user: User {
                 id: i as i32,
                 name: format!("User {}", i + 1),
-                avatar_url: format!(""),
+                avatar_url: String::new(),
             },
         })
     }
@@ -92,7 +87,7 @@ async fn get_messages(
         StatusCode::OK,
         Html(
             templates::ChannelPageTemplate {
-                messages: messages,
+                messages,
                 page: pagination.page,
                 channel: Channel { name: channel },
             }
