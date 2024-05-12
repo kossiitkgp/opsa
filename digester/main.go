@@ -53,8 +53,8 @@ type Message struct {
 const (
 	ZIPFILE_PATH      = "/slack-export.zip"
 	EXTRACTION_DIR    = "/extracted"
-	USERS_FILENAME    = "users.json"
-	CHANNELS_FILENAME = "channels.json"
+	USERS_FILEPATH    = EXTRACTION_DIR + "/users.json"
+	CHANNELS_FILEPATH = EXTRACTION_DIR + "/channels.json"
 	SLACKBOT_ID       = "USLACKBOT"
 )
 
@@ -152,7 +152,7 @@ func main() {
 	CheckError(err)
 	log.Println("Slack export has been successfully extracted!")
 
-	usersFile, err := os.ReadFile(EXTRACTION_DIR + string(os.PathSeparator) + USERS_FILENAME)
+	usersFile, err := os.ReadFile(USERS_FILEPATH)
 	CheckError(err)
 	var users []User
 	err = json.Unmarshal(usersFile, &users)
@@ -180,7 +180,7 @@ func main() {
 	}
 	log.Println("Digester sent users to the tummy.")
 
-	channelsFile, err := os.ReadFile(EXTRACTION_DIR + string(os.PathSeparator) + CHANNELS_FILENAME)
+	channelsFile, err := os.ReadFile(CHANNELS_FILEPATH)
 	CheckError(err)
 	var channels []Channel
 	err = json.Unmarshal(channelsFile, &channels)
@@ -197,7 +197,7 @@ func main() {
 	totalMessagesCount := 0
 	totalMessagesAddedCount := 0
 	for _, channel := range channels {
-		messagesDirPath := EXTRACTION_DIR + string(os.PathSeparator) + channel.Name
+		messagesDirPath := filepath.Join(EXTRACTION_DIR, channel.Name)
 		messageFiles, err := os.ReadDir(messagesDirPath)
 		CheckError(err)
 
@@ -206,7 +206,7 @@ func main() {
 				continue
 			}
 
-			messageFilePath := messagesDirPath + string(os.PathSeparator) + messageFile.Name()
+			messageFilePath := filepath.Join(messagesDirPath, messageFile.Name())
 			messagesFile, err := os.ReadFile(messageFilePath)
 			CheckError(err)
 
