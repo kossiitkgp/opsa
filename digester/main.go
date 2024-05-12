@@ -159,7 +159,7 @@ func main() {
 	CheckError(err)
 	log.Println("Digester found " + fmt.Sprint(len(users)) + " users.")
 
-	// Add slackbot as a user
+	// Slackbot is a special bot that is not included in the users.json file and also doesnt have a bot_id
 	slackbot := User{
 		ID:      SLACKBOT_ID,
 		Name:    "slackbot",
