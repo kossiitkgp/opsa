@@ -186,7 +186,7 @@ func main() {
 		_, err = db.Exec(query, channel.Name, channel.Topic.Value, channel.Purpose.Value)
 		CheckError(err)
 	}
-	log.Println("Digester sent channels to the tummy.")
+	log.Println("Digester digested channels and sent to the tummy.")
 
 	totalMessagesCount := 0
 	totalMessagesAddedCount := 0
