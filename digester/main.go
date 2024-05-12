@@ -40,14 +40,14 @@ type Channel struct {
 }
 
 type Message struct {
-	Channel      string
-	UserID       string `json:"user"`
-	BotID        string `json:"bot_id"`
-	BotUsername  string `json:"username"`
-	TS           string `json:"ts"`
-	Text         string `json:"text"`
-	ThreadTS     string `json:"thread_ts"`
-	ParentUserID string `json:"parent_user_id"`
+	Channel         string
+	UserID          string `json:"user"`
+	BotID           string `json:"bot_id"`
+	BotUsername     string `json:"username"`
+	Timestamp       string `json:"ts"`
+	Text            string `json:"text"`
+	ThreadTimestamp string `json:"thread_ts"`
+	ParentUserID    string `json:"parent_user_id"`
 }
 
 const (
@@ -246,7 +246,7 @@ func main() {
 				}
 
 				query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, thread_ts, parent_user_id) VALUES ($1, $2, $3, $4, $5, $6)"
-				_, err = db.Exec(query, message.Channel, message.UserID, message.TS, message.Text, message.ThreadTS, message.ParentUserID)
+				_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ThreadTimestamp, message.ParentUserID)
 				if err != nil {
 					log.Println(message)
 				}
