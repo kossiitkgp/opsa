@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -126,11 +125,6 @@ func unzipSource(src, dest string) error {
 }
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Println("WARNING: " + err.Error())
-	}
-
 	host := os.Getenv("TUMMY_HOST")
 	port, err := strconv.Atoi(os.Getenv("TUMMY_PORT"))
 	CheckError(err)
