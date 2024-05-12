@@ -8,8 +8,8 @@ use axum::{
 };
 use serde::Deserialize;
 
-mod templates;
 mod models;
+mod templates;
 
 use models::{Channel, Message, User};
 
@@ -33,44 +33,72 @@ async fn main() {
 #[derive(Deserialize)]
 struct Pagination {
     page: usize,
-    per_page: usize
+    per_page: usize,
 }
 
 // basic handler that responds with a static string
 async fn root() -> (StatusCode, Response) {
-    let mut channels:Vec<Channel> = vec![];
+    let mut channels: Vec<Channel> = vec![];
     for i in 0..10 {
-        channels.push(Channel{
-            name:format!("Channel-{}", i)
+        channels.push(Channel {
+            name: format!("Channel-{}", i),
         })
     }
 
-    (StatusCode::OK, Html(templates::IndexTemplate{channels:channels}.render().unwrap()).into_response())
+    (
+        StatusCode::OK,
+        Html(
+            templates::IndexTemplate { channels: channels }
+                .render()
+                .unwrap(),
+        )
+        .into_response(),
+    )
 }
 
 async fn load_channel(Path(channel): Path<String>) -> (StatusCode, Response) {
-    (StatusCode::OK, Html(templates::ChannelTemplate{channel: Channel{name: channel}}.render().unwrap()).into_response())
+    (
+        StatusCode::OK,
+        Html(
+            templates::ChannelTemplate {
+                channel: Channel { name: channel },
+            }
+            .render()
+            .unwrap(),
+        )
+        .into_response(),
+    )
 }
 
-async fn get_messages(Path(channel): Path<String>, pagination: Query<Pagination>) -> (StatusCode, Response) {
-
+async fn get_messages(
+    Path(channel): Path<String>,
+    pagination: Query<Pagination>,
+) -> (StatusCode, Response) {
     // Generate test messages
     let mut messages: Vec<Message> = vec![];
-    for i in (pagination.page-1)*pagination.per_page..pagination.page*pagination.per_page {
-        messages.push(Message{
+    for i in (pagination.page - 1) * pagination.per_page..pagination.page * pagination.per_page {
+        messages.push(Message {
             id: i as i32,
-            text: format!("Test message {}", i+1),
-            user: User{
+            text: format!("Test message {}", i + 1),
+            user: User {
                 id: i as i32,
-                name: format!("User {}", i+1),
-                avatar_url: format!("")
-            }
+                name: format!("User {}", i + 1),
+                avatar_url: format!(""),
+            },
         })
     }
 
-    (StatusCode::OK, Html(templates::ChannelPageTemplate{
-        messages:messages, 
-        page:pagination.page,
-        channel: Channel{name: channel},
-    }.render().unwrap()).into_response())
+    (
+        StatusCode::OK,
+        Html(
+            templates::ChannelPageTemplate {
+                messages: messages,
+                page: pagination.page,
+                channel: Channel { name: channel },
+            }
+            .render()
+            .unwrap(),
+        )
+        .into_response(),
+    )
 }
