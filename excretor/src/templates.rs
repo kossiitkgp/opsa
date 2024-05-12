@@ -8,13 +8,16 @@ pub struct Base;
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate{
-    pub channels: Vec<Channel>
+    pub channels: Vec<Channel>,
+    pub per_page: usize,
 }
 
 #[derive(Template)]
 #[template(path = "channel.html")]
 pub struct ChannelTemplate {
     pub channel: Channel,
+    pub per_page: usize,
+    pub messages: Vec<Message>,
 }
 
 #[derive(Template)]
@@ -23,4 +26,5 @@ pub struct ChannelPageTemplate {
     pub messages: Vec<Message>,
     pub page: usize,
     pub channel: Channel,
+    pub per_page: usize,
 }
