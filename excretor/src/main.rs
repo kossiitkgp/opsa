@@ -8,8 +8,8 @@ use axum::{
 };
 use serde::Deserialize;
 
-mod templates;
 mod models;
+mod templates;
 
 use models::{Channel, Message, User};
 
@@ -38,14 +38,15 @@ struct Pagination {
     page: usize,
     per_page: usize,
     pane: Option<String>
+
 }
 
 // basic handler that responds with a static string
 async fn root() -> (StatusCode, Response) {
-    let mut channels:Vec<Channel> = vec![];
+    let mut channels: Vec<Channel> = vec![];
     for i in 0..10 {
-        channels.push(Channel{
-            name:format!("Channel-{}", i)
+        channels.push(Channel {
+            name: format!("Channel-{}", i),
         })
     }
 
@@ -82,17 +83,18 @@ async fn get_messages(Path(channel): Path<String>, pagination: Query<Pagination>
         return (StatusCode::BAD_REQUEST, Html("Invalid page number").into_response());
     }
 
+
     // Generate test messages
     let mut messages: Vec<Message> = vec![];
-    for i in (pagination.page-1)*pagination.per_page..pagination.page*pagination.per_page {
-        messages.push(Message{
+    for i in (pagination.page - 1) * pagination.per_page..pagination.page * pagination.per_page {
+        messages.push(Message {
             id: i as i32,
-            text: format!("Test message {}", i+1),
-            user: User{
+            text: format!("Test message {}", i + 1),
+            user: User {
                 id: i as i32,
-                name: format!("User {}", i+1),
-                avatar_url: format!("")
-            }
+                name: format!("User {}", i + 1),
+                avatar_url: String::new(),
+            },
         })
     }
 
@@ -127,3 +129,4 @@ async fn get_messages(Path(channel): Path<String>, pagination: Query<Pagination>
 
     (StatusCode::OK, Html(response).into_response())
 }
+
