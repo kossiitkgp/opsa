@@ -1,5 +1,5 @@
+use crate::models::{Channel, Message};
 use askama::Template;
-use crate::models::{Message, Channel};
 
 #[derive(Template)]
 #[template(path = "base.html")]
@@ -7,8 +7,8 @@ pub struct Base;
 
 #[derive(Template)]
 #[template(path = "index.html")]
-pub struct IndexTemplate{
-    pub channels: Vec<Channel>
+pub struct IndexTemplate {
+    pub channels: Vec<Channel>,
 }
 
 #[derive(Template)]

@@ -12,7 +12,7 @@ mod models;
 mod templates;
 
 use models::{Channel, Message, User};
-use tracing::{event, info, Level};
+use tracing::info;
 
 use tracing_subscriber::prelude::*;
 
@@ -28,11 +28,17 @@ async fn main() {
         .route("/channels/:channel", get(load_channel))
         .route("/messages/:channel", get(get_messages));
 
-    // run our app with hyper, listening globally on port 3000
-    event!(Level::INFO, "Starting excretor server on port 3000.");
+    // Get the port for the server from environment variables, or use 3000 as default
+    let excretor_port: String = std::env::var_os("EXCRETOR_PORT")
+        .unwrap_or("3000".into())
+        .into_string()
+        .unwrap();
+
+    info!("Starting excretor on port {}.", excretor_port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    tracing::debug!("Excretor listening on {}", listener.local_addr().unwrap());
+
     axum::serve(listener, app).await.unwrap();
-    info!("Started excretor server on port 3000.");
 }
 
 #[derive(Deserialize)]
