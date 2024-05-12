@@ -172,7 +172,7 @@ func main() {
 		CheckError(err)
 		userIDSet[user.ID] = true
 	}
-	log.Println("Digester sent users to the tummy.")
+	log.Println("Digester digested users and sent to the tummy.")
 
 	channelsFile, err := os.ReadFile(CHANNELS_FILEPATH)
 	CheckError(err)
