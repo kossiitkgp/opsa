@@ -1,7 +1,6 @@
 services:
   tummy:
     image: postgres
-    profiles: ["digest", "excrete"]
     restart: always
     environment:
       - POSTGRES_USER=${TUMMY_USERNAME}
@@ -24,7 +23,6 @@ services:
 
   excretor:
     build: "./excretor"
-    profiles: ["excrete"]
     restart: always
     depends_on:
       tummy:
@@ -39,25 +37,6 @@ services:
       digestive-tract:
         aliases:
           - excretor
-
-  digester:
-    build: "./digester"
-    profiles: ["digest"]
-    depends_on:
-      tummy:
-        condition: service_healthy
-    environment:
-      - TUMMY_USERNAME=${TUMMY_USERNAME}
-      - TUMMY_PASSWORD=${TUMMY_PASSWORD}
-      - TUMMY_DB=tummy
-      - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=tummy
-    volumes:
-      - ${ZIPFILE_PATH}:/slack-export.zip
-    networks:
-      digestive-tract:
-        aliases:
-          - mouth
 
 networks:
   digestive-tract:
