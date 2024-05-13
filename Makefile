@@ -1,10 +1,22 @@
 SHELL := /bin/bash
+
+DATABASE_VOLUME := food
+
+PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
 
 default: build run 
 
 build:
 	docker compose build
+
+run:
+	docker compose up -d
+
+stop:
+	docker compose stop
+	docker compose down
+
 
 digest:
 	@if [[ -z "$(FILE)" ]]; then \
@@ -25,11 +37,11 @@ run-digester:
 	ZIPFILE_PATH=$(FILE) docker compose -f docker-compose-digester.yml up --build --abort-on-container-exit; \
 	ZIPFILE_PATH=$(FILE) docker compose -f docker-compose-digester.yml down; \
 
-excrete:
-	docker compose --profile excrete up -d
+.PHONY: check_clean
+check_clean:
+	@echo "This will remove the database volume. This action is irreversible."
+	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
 
-run:
-	docker compose --profile excrete --profile digest up -d
-
-stop:
-	docker compose stop
+.PHONY: clean
+clean: check_clean
+	docker volume rm $(notdir $(PROJECT_DIR))_$(DATABASE_VOLUME)
