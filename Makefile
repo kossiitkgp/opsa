@@ -6,10 +6,12 @@ else
     DOCKER_COMPOSE=docker-compose
 endif
 
-# List of all targets which are meant to be run by the user (should have a description)
-ALL_TARGETS := $(shell sed -n 's/^## //p' ${MAKEFILE_LIST} | awk -F ':' '{print $$1}')
+CURRENT_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
-PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+# List of all targets which are meant to be run by the user (should have a description)
+ALL_TARGETS := $(shell sed -n 's/^## //p' $(CURRENT_MAKEFILE) | awk -F ':' '{print $$1}')
+
+PROJECT_DIR := $(shell dirname $(realpath $(CURRENT_MAKEFILE)))
 TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
 
 default: build run
@@ -27,7 +29,7 @@ endif
 ## help: Show this help message
 help:
 	@echo "Usage: make [target]"
-	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
+	@sed -n 's/^##//p' $(CURRENT_MAKEFILE) | column -t -s ':' |  sed -e 's/^/ /'
 	@echo ""
 	@echo "Running 'make' without a target is equivalent to running 'make build run'."
 
