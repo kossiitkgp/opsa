@@ -1,4 +1,3 @@
-SHELL := /bin/bash
 DATABASE_VOLUME := food
 
 # List of all targets which are meant to be run by the user (should have a description)
