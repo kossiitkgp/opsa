@@ -22,24 +22,19 @@ use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() {
+    // Read environment variables
+    let env_vars = env::EnvVars::init();
+
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();
 
-    // Get the port for the server from environment variables, or use 3000 as default
-    let excretor_port: String = std::env::var_os("EXCRETOR_PORT")
-        .unwrap_or("3000".into())
-        .into_string()
-        .unwrap();
-
-    let tummy_username = std::env::var("TUMMY_USERNAME").unwrap();
-    let tummy_db = std::env::var("TUMMY_DB").unwrap();
-    let tummy_port = std::env::var("TUMMY_PORT").unwrap();
-    let tummy_host = std::env::var("TUMMY_HOST").unwrap();
-    let tummy_password = std::env::var("TUMMY_PASSWORD").unwrap();
-
     let tummy_conn_string = format!(
         "postgres://{}:{}@{}:{}/{}",
-        tummy_username, tummy_password, tummy_host, tummy_port, tummy_db
+        env_vars.tummy_username,
+        env_vars.tummy_password,
+        env_vars.tummy_host,
+        env_vars.tummy_port,
+        env_vars.tummy_db
     );
 
     let tummy_conn_pool = PgPoolOptions::new()
@@ -57,7 +52,7 @@ async fn main() {
         .route("/messages/:channel", get(get_messages))
         .with_state(tummy_conn_pool);
 
-    info!("Starting excretor on port {}.", excretor_port);
+    info!("Starting excretor on port {}.", env_vars.excretor_port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("Excretor listening on {}", listener.local_addr().unwrap());
 
