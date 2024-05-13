@@ -1,5 +1,11 @@
 DATABASE_VOLUME := food
 
+ifeq (, $(shell which docker-compose))
+    DOCKER_COMPOSE=docker compose
+else
+    DOCKER_COMPOSE=docker-compose
+endif
+
 # List of all targets which are meant to be run by the user (should have a description)
 ALL_TARGETS := $(shell sed -n 's/^## //p' ${MAKEFILE_LIST} | awk -F ':' '{print $$1}')
 
@@ -27,16 +33,16 @@ help:
 
 ## build: Build the excreter and tummy docker images
 build:
-	docker compose build
+	$(DOCKER_COMPOSE) build
 
 ## run: Run the excreter and tummy docker containers
 run:
-	docker compose up -d
+	$(DOCKER_COMPOSE) up -d
 
 ## stop: Stop the excreter and tummy docker containers
 stop:
-	docker compose stop
-	docker compose down
+	$(DOCKER_COMPOSE) stop
+	$(DOCKER_COMPOSE) down
 
 ## digest: Run the digester container
 digest:
@@ -47,15 +53,15 @@ digest:
 	@if [[ -n "$(TUMMY_CONTAINER_ID)" ]]; then \
 		$(MAKE) run-digester; \
 	else \
-		docker compose up tummy -d; \
+		$(DOCKER_COMPOSE) up tummy -d; \
 		$(MAKE) run-digester; \
-		docker compose down; \
+		$(DOCKER_COMPOSE) down; \
 	fi; \
 	echo "Digestion complete.";
 
 run-digester:
-	ZIPFILE_PATH=$(FILE) docker compose -f docker-compose-digester.yml up --build --abort-on-container-exit; \
-	ZIPFILE_PATH=$(FILE) docker compose -f docker-compose-digester.yml down; \
+	ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) -f docker-compose-digester.yml up --build --abort-on-container-exit; \
+	ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) -f docker-compose-digester.yml down; \
 
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."
