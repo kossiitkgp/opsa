@@ -47,8 +47,13 @@ run-digester:
 
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."
-	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
+	@echo -n "Are you sure you want to proceed? [y/N] " && read ans; \
+    if [ $${ans:-N} != y ] && [ $${ans:-N} != Y ]; then \
+        echo "Operation canceled."; \
+        exit 1; \
+    fi
 
 ## clean: Remove the database volume
 clean: check_clean
-	docker volume rm $(notdir $(PROJECT_DIR))_$(DATABASE_VOLUME)
+	@docker volume rm $(notdir $(PROJECT_DIR))_$(DATABASE_VOLUME)
+	@echo "Database volume removed."
