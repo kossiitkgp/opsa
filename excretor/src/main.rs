@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
     routing::get,
@@ -14,9 +14,16 @@ mod templates;
 mod tummy;
 
 use models::{Channel, Message, User};
+use sqlx::PgPool;
 use tracing::info;
 
 use tracing_subscriber::prelude::*;
+use tummy::Tummy;
+
+#[derive(Clone)]
+struct RouterState {
+    tummy: Tummy,
+}
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +33,7 @@ async fn main() {
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();
 
-    let tummy_conn_pool = tummy::get_tummy_conn_pool(&env_vars).await;
+    let tummy = Tummy::init(&env_vars).await;
 
     // build our application with a route
     let app = Router::new()
@@ -34,7 +41,7 @@ async fn main() {
         .route("/", get(root))
         .route("/channels/:channel", get(load_channel))
         .route("/messages/:channel", get(get_messages))
-        .with_state(tummy_conn_pool);
+        .with_state(RouterState { tummy });
 
     info!("Starting excretor on port {}.", env_vars.excretor_port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -49,14 +56,18 @@ struct Pagination {
     per_page: usize,
 }
 
+/// Utility function for mapping any error into a `500 Internal Server Error`
+/// response.
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+}
+
 // basic handler that responds with a static string
-async fn root() -> (StatusCode, Response) {
-    let mut channels: Vec<Channel> = vec![];
-    for i in 0..10 {
-        channels.push(Channel {
-            name: format!("Channel-{}", i),
-        })
-    }
+async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
+    let channels = state.tummy.get_channels().await;
 
     (
         StatusCode::OK,

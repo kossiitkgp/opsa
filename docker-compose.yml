@@ -36,6 +36,8 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=tummy
+    ports:
+      - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
     networks:
       digestive-tract:
         aliases:

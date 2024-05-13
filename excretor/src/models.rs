@@ -1,3 +1,5 @@
+use sqlx::prelude::FromRow;
+
 pub struct Message {
     pub id: i32,
     pub text: String,
@@ -10,6 +12,7 @@ pub struct User {
     pub avatar_url: String,
 }
 
+#[derive(FromRow)]
 pub struct Channel {
     pub name: String,
 }
