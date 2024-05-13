@@ -30,6 +30,7 @@ services:
       tummy:
         condition: service_healthy
     environment:
+      - EXCRETOR_PORT=${EXCRETOR_PORT}
       - TUMMY_USERNAME=${TUMMY_USERNAME}
       - TUMMY_PASSWORD=${TUMMY_PASSWORD}
       - TUMMY_DB=tummy

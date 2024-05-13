@@ -10,6 +10,7 @@ use axum::{
 };
 use serde::Deserialize;
 
+mod env;
 mod models;
 mod templates;
 
