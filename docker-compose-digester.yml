@@ -7,6 +7,7 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=tummy
+      - WAIT_HOSTS=tummy:${TUMMY_PORT}
     volumes:
       - ${ZIPFILE_PATH}:/slack-export.zip
     networks:
