@@ -17,11 +17,11 @@ default: build run
 .PHONY: ALL_TARGETS
 
 %:
-	@if [[ -z "$(filter $(MAKECMDGOALS), $(ALL_TARGETS))" ]]; then \
-		echo "Target '$(MAKECMDGOALS)' not found."; \
-		echo ""; \
-		$(MAKE) --no-print-directory help; \
-	fi
+ifeq (, $(filter $(MAKECMDGOALS), $(ALL_TARGETS)))
+	@echo "Target '$(MAKECMDGOALS)' not found."
+	@echo ""
+	@$(MAKE) --no-print-directory help
+endif
 
 
 ## help: Show this help message
@@ -46,18 +46,18 @@ stop:
 
 ## digest: Run the digester container
 digest:
-	@if [[ -z "$(FILE)" ]]; then \
-        echo "ERROR: No file path provided. Please specify the file path using 'make digest FILE=/path-to-file'"; \
-        exit 1; \
-    fi;
-	@if [[ -n "$(TUMMY_CONTAINER_ID)" ]]; then \
-		$(MAKE) run-digester; \
-	else \
-		$(DOCKER_COMPOSE) up tummy -d; \
-		$(MAKE) run-digester; \
-		$(DOCKER_COMPOSE) down; \
-	fi; \
-	echo "Digestion complete.";
+ifeq (, $(FILE))
+	@echo "ERROR: No file path provided. Please specify the file path using 'make digest FILE=/path-to-file'"
+	@exit 1;
+endif
+ifneq (, $(TUMMY_CONTAINER_ID))
+	$(MAKE) run-digester;
+else
+	$(DOCKER_COMPOSE) up tummy -d; \
+	$(MAKE) run-digester; \
+	$(DOCKER_COMPOSE) down;
+endif
+	@echo "Digestion complete."
 
 run-digester:
 	ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) -f docker-compose-digester.yml up --build --abort-on-container-exit; \
