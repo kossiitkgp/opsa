@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use askama::Template;
 use axum::{
     extract::{Path, Query},
@@ -13,9 +11,9 @@ use serde::Deserialize;
 mod env;
 mod models;
 mod templates;
+mod tummy;
 
 use models::{Channel, Message, User};
-use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 
 use tracing_subscriber::prelude::*;
@@ -28,21 +26,7 @@ async fn main() {
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();
 
-    let tummy_conn_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        env_vars.tummy_username,
-        env_vars.tummy_password,
-        env_vars.tummy_host,
-        env_vars.tummy_port,
-        env_vars.tummy_db
-    );
-
-    let tummy_conn_pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(3))
-        .connect(&tummy_conn_string)
-        .await
-        .expect("Could not connect to tummy.");
+    let tummy_conn_pool = tummy::get_tummy_conn_pool(&env_vars).await;
 
     // build our application with a route
     let app = Router::new()
