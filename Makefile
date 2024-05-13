@@ -2,7 +2,7 @@ SHELL := /bin/bash
 DATABASE_VOLUME := food
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
+TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
 
 default: build run
 
@@ -32,7 +32,7 @@ digest:
         echo "ERROR: No file path provided. Please specify the file path using 'make digest FILE=/path-to-file'"; \
         exit 1; \
     fi;
-	@if [[ -n "$(CONTAINER_ID)" ]]; then \
+	@if [[ -n "$(TUMMY_CONTAINER_ID)" ]]; then \
 		$(MAKE) run-digester; \
 	else \
 		docker compose up tummy -d; \
