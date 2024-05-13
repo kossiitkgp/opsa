@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use askama::Template;
 use axum::{
     extract::{Path, Query},
@@ -12,6 +14,7 @@ mod models;
 mod templates;
 
 use models::{Channel, Message, User};
+use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 
 use tracing_subscriber::prelude::*;
@@ -21,18 +24,37 @@ async fn main() {
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();
 
-    // build our application with a route
-    let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        .route("/channels/:channel", get(load_channel))
-        .route("/messages/:channel", get(get_messages));
-
     // Get the port for the server from environment variables, or use 3000 as default
     let excretor_port: String = std::env::var_os("EXCRETOR_PORT")
         .unwrap_or("3000".into())
         .into_string()
         .unwrap();
+
+    let tummy_username = std::env::var("TUMMY_USERNAME").unwrap();
+    let tummy_db = std::env::var("TUMMY_DB").unwrap();
+    let tummy_port = std::env::var("TUMMY_PORT").unwrap();
+    let tummy_host = std::env::var("TUMMY_HOST").unwrap();
+    let tummy_password = std::env::var("TUMMY_PASSWORD").unwrap();
+
+    let tummy_conn_string = format!(
+        "postgres://{}:{}@{}:{}/{}",
+        tummy_username, tummy_password, tummy_host, tummy_port, tummy_db
+    );
+
+    let tummy_conn_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&tummy_conn_string)
+        .await
+        .expect("Could not connect to tummy.");
+
+    // build our application with a route
+    let app = Router::new()
+        // `GET /` goes to `root`
+        .route("/", get(root))
+        .route("/channels/:channel", get(load_channel))
+        .route("/messages/:channel", get(get_messages))
+        .with_state(tummy_conn_pool);
 
     info!("Starting excretor on port {}.", excretor_port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
