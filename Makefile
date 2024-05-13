@@ -8,6 +8,7 @@ default: build run
 
 .PHONY: help build run stop digest run-digester check_clean clean
 
+## help: Show this help message
 help:
 	@echo "Usage: make [target]"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
