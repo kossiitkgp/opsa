@@ -1,17 +1,30 @@
 SHELL := /bin/bash
 DATABASE_VOLUME := food
 
+# List of all targets which are meant to be run by the user (should have a description)
+ALL_TARGETS := $(shell sed -n 's/^## //p' ${MAKEFILE_LIST} | awk -F ':' '{print $$1}')
+
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
 
 default: build run
 
-.PHONY: help build run stop digest run-digester check_clean clean
+.PHONY: ALL_TARGETS
+
+%:
+	@if [[ -z "$(filter $(MAKECMDGOALS), $(ALL_TARGETS))" ]]; then \
+		echo "Target '$(MAKECMDGOALS)' not found."; \
+		echo ""; \
+		$(MAKE) --no-print-directory help; \
+	fi
+
 
 ## help: Show this help message
 help:
 	@echo "Usage: make [target]"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
+	@echo ""
+	@echo "Running 'make' without a target is equivalent to running 'make build run'."
 
 ## build: Build the excreter and tummy docker images
 build:
