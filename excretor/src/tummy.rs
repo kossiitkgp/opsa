@@ -29,10 +29,9 @@ impl Tummy {
         }
     }
 
-    pub async fn get_channels(&self) -> Vec<Channel> {
+    pub async fn get_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
         sqlx::query_as::<_, Channel>("select * from channels")
             .fetch_all(&self.tummy_conn_pool)
             .await
-            .unwrap()
     }
 }

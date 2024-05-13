@@ -14,7 +14,6 @@ mod templates;
 mod tummy;
 
 use models::{Channel, Message, User};
-use sqlx::PgPool;
 use tracing::info;
 
 use tracing_subscriber::prelude::*;
@@ -58,21 +57,32 @@ struct Pagination {
 
 /// Utility function for mapping any error into a `500 Internal Server Error`
 /// response.
-fn internal_error<E>(err: E) -> (StatusCode, String)
+fn internal_error<E>(err: E) -> (StatusCode, Response)
 where
     E: std::error::Error,
 {
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Html(
+            templates::ErrTemplate {
+                err_string: err.to_string(),
+            }
+            .render()
+            .unwrap(),
+        )
+        .into_response(),
+    )
 }
 
 // basic handler that responds with a static string
 async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
-    let channels = state.tummy.get_channels().await;
-
-    (
-        StatusCode::OK,
-        Html(templates::IndexTemplate { channels }.render().unwrap()).into_response(),
-    )
+    match state.tummy.get_channels().await.map_err(internal_error) {
+        Err(err) => err,
+        Ok(channels) => (
+            StatusCode::OK,
+            Html(templates::IndexTemplate { channels }.render().unwrap()).into_response(),
+        ),
+    }
 }
 
 async fn load_channel(Path(channel): Path<String>) -> (StatusCode, Response) {

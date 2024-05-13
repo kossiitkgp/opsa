@@ -12,6 +12,12 @@ pub struct IndexTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "err.html")]
+pub struct ErrTemplate {
+    pub err_string: String,
+}
+
+#[derive(Template)]
 #[template(path = "channel.html")]
 pub struct ChannelTemplate {
     pub channel: Channel,
