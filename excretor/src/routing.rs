@@ -30,7 +30,7 @@ mod handlers {
     #[derive(Deserialize)]
     pub struct Pagination {
         last_msg_timestamp: Option<String>,
-        per_page: usize,
+        per_page: u32,
     }
 
     /// Utility function for mapping any error into a `500 Internal Server Error`

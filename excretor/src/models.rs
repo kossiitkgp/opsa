@@ -4,6 +4,7 @@ use sqlx::prelude::FromRow;
 pub struct Message {
     pub channel_name: String,
     pub user_id: String,
+    #[sqlx(rename = "msg_text")]
     pub text: String,
     #[sqlx(rename = "ts")]
     pub timestamp: String,
