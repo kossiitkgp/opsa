@@ -1,4 +1,3 @@
-use axum::{routing::get, Router};
 use clap::Parser;
 
 mod env;
@@ -21,14 +20,7 @@ async fn main() {
     tracing_subscriber::registry().with(stdout_log).init();
 
     let tummy = Tummy::init(&env_vars).await;
-
-    // build our application with a route
-    let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(routing::handlers::root))
-        .route("/channels/:channel", get(routing::handlers::load_channel))
-        .route("/messages/:channel", get(routing::handlers::get_messages))
-        .with_state(routing::RouterState { tummy });
+    let app = routing::get_excretor_router(tummy);
 
     info!("Starting excretor on port {}.", env_vars.excretor_port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

@@ -1,11 +1,21 @@
 use crate::tummy::Tummy;
+use axum::{routing::get, Router};
 
 #[derive(Clone)]
-pub struct RouterState {
+struct RouterState {
     pub tummy: Tummy,
 }
 
-pub mod handlers {
+pub fn get_excretor_router(tummy: Tummy) -> Router {
+    Router::new()
+        // `GET /` goes to `root`
+        .route("/", get(handlers::root))
+        .route("/channels/:channel", get(handlers::load_channel))
+        .route("/messages/:channel", get(handlers::get_messages))
+        .with_state(RouterState { tummy })
+}
+
+mod handlers {
     use super::RouterState;
     use crate::models::{Channel, Message, User};
     use crate::templates;
@@ -44,7 +54,7 @@ pub mod handlers {
     }
 
     // basic handler that responds with a static string
-    pub async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
+    pub(super) async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
         match state.tummy.get_all_channels().await.map_err(internal_error) {
             Err(err) => err,
             Ok(channels) => (
@@ -54,7 +64,7 @@ pub mod handlers {
         }
     }
 
-    pub async fn load_channel(Path(channel): Path<String>) -> (StatusCode, Response) {
+    pub(super) async fn load_channel(Path(channel): Path<String>) -> (StatusCode, Response) {
         (
             StatusCode::OK,
             Html(
@@ -68,7 +78,7 @@ pub mod handlers {
         )
     }
 
-    pub async fn get_messages(
+    pub(super) async fn get_messages(
         Path(channel): Path<String>,
         pagination: Query<Pagination>,
     ) -> (StatusCode, Response) {
