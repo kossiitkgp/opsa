@@ -26,6 +26,14 @@ pub struct User {
 }
 
 #[derive(FromRow)]
+pub struct MessageAndUser {
+    #[sqlx(flatten)]
+    pub message: Message,
+    #[sqlx(flatten)]
+    pub user: User,
+}
+
+#[derive(FromRow)]
 pub struct Channel {
     pub name: String,
     pub topic: String,

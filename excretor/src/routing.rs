@@ -17,7 +17,6 @@ pub fn get_excretor_router(tummy: Tummy) -> Router {
 
 mod handlers {
     use super::RouterState;
-    use crate::models::{Channel, Message, User};
     use crate::templates;
     use askama::Template;
     use axum::extract::{Path, Query, State};
@@ -30,7 +29,7 @@ mod handlers {
 
     #[derive(Deserialize)]
     pub struct Pagination {
-        page: usize,
+        last_msg_timestamp: String,
         per_page: usize,
     }
 
@@ -68,7 +67,6 @@ mod handlers {
         State(state): State<RouterState>,
         Path(channel): Path<String>,
     ) -> (StatusCode, Response) {
-        println!("{}", channel);
         match state
             .tummy
             .get_channel_info(&channel)
@@ -84,46 +82,41 @@ mod handlers {
     }
 
     pub(super) async fn get_messages(
-        Path(channel): Path<String>,
+        State(state): State<RouterState>,
+        Path(channel_name): Path<String>,
         pagination: Query<Pagination>,
     ) -> (StatusCode, Response) {
-        // Generate test messages
-        let mut messages: Vec<(Message, User)> = vec![];
-        for i in (pagination.page - 1) * pagination.per_page..pagination.page * pagination.per_page
-        {
-            messages.push(
-                (Message {
-                    text: format!("Test message {}", i + 1),
-                    channel_name: "idk yet".into(),
-                    user_id: "A user.".into(),
-                    timestamp: "0".into(),
-                    thread_timestamp: "0".into(),
-                    parent_user_id: "Another user".into(),
-                },  User {
-                    real_name: "Lmao the frontend devs are going to have a field day with this.".into(),
-                    display_name: "Seriously though, the db has not yet been integrated here, so please bare with me.".into(),
-                    email: "backend_developer@hell.com".into(),
-                    deleted: false,
-                    is_bot: false,
-                    id: i.to_string(),
-                    name: format!("User {}", i + 1),
-                    image_url: String::new(),
-                })
-            );
-        }
-
-        (
-            StatusCode::OK,
-            Html(
-                templates::ChannelPageTemplate {
-                    messages,
-                    page: pagination.page,
-                    channel: Channel { name: channel, topic: "Dear frontend developers. I am sorry you have to go through this but that's just how it is.".into(), purpose: "You are either a frontend developer cursing me right now or a backend developer. Neither case is good but either is necessary at the moment.".into() },
-                }
-                .render()
-                .unwrap(),
+        match state
+            .tummy
+            .fetch_msg_page(
+                &channel_name,
+                &pagination.last_msg_timestamp,
+                &pagination.per_page,
             )
-            .into_response(),
-        )
+            .await
+            .map_err(internal_error)
+        {
+            Err(err) => err,
+            Ok(messages) => {
+                let new_last_msg_timestamp = messages
+                    .last()
+                    .map(|msg| msg.message.timestamp.clone())
+                    .unwrap_or("0".into());
+
+                (
+                    StatusCode::OK,
+                    Html(
+                        templates::ChannelPageTemplate {
+                            messages,
+                            last_msg_timestamp: new_last_msg_timestamp,
+                            channel_name,
+                        }
+                        .render()
+                        .unwrap(),
+                    )
+                    .into_response(),
+                )
+            }
+        }
     }
 }
