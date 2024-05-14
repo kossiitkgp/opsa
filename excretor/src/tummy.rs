@@ -1,7 +1,10 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 
-use crate::{env::EnvVars, models::Channel};
+use crate::{
+    env::EnvVars,
+    models::{Channel, MessageAndUser, User},
+};
 
 #[derive(Clone)]
 pub struct Tummy {
@@ -40,5 +43,28 @@ impl Tummy {
             .bind(channel_name)
             .fetch_one(&self.tummy_conn_pool)
             .await
+    }
+
+    pub async fn get_user(&self, user_id: &str) -> Result<User, sqlx::Error> {
+        sqlx::query_as::<_, User>("select * from users where id = $1")
+            .bind(user_id)
+            .fetch_one(&self.tummy_conn_pool)
+            .await
+    }
+
+    pub async fn fetch_msg_page(
+        &self,
+        channel_name: &str,
+        last_msg_timestamp: &str,
+        msgs_per_page: &usize,
+    ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
+        sqlx::query_as::<_, MessageAndUser>(
+            "SELECT messages.*, uesrs.* FROM messages WHERE ts < $1 AND channel_name = $2 ORDER BY ts DESC LIMIT $3 INNER JOIN users ON users.id = messages.uesr_id",
+        )
+        .bind(last_msg_timestamp)
+        .bind(channel_name)
+        .bind(msgs_per_page.to_string())
+        .fetch_all(&self.tummy_conn_pool)
+        .await
     }
 }
