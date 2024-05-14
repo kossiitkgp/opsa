@@ -239,10 +239,12 @@ func main() {
 					}
 				}
 
-				query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, thread_ts, parent_user_id) VALUES ($1, $2, $3, $4, $5, $6)"
-				_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ThreadTimestamp, message.ParentUserID)
-				if err != nil {
-					log.Println(message)
+				if message.ThreadTimestamp != "" {
+					query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
+					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
+				} else {
+					query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
+					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
 				}
 				CheckError(err)
 				totalMessagesAddedCount++
