@@ -1,7 +1,6 @@
 FROM rust:slim
 
 WORKDIR /usr/src/myapp
-COPY . .
 
 # Copy a dummy source file and Cargo.toml used to compile deps first
 COPY dummy.rs .
