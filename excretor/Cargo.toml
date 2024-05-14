@@ -16,3 +16,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 sqlx = { version = "0.7.3", features = ["postgres", "macros", "runtime-tokio", "chrono"] }
 askama = "0.12.1"
 clap = { version = "4.5.4", features = ["derive", "env"] }
+tokio-util = { version = "0.7.11", features = ["io"] }
