@@ -1,10 +1,7 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 
-use crate::{
-    env::EnvVars,
-    models::{Channel, User},
-};
+use crate::{env::EnvVars, models::Channel};
 
 #[derive(Clone)]
 pub struct Tummy {
@@ -34,12 +31,6 @@ impl Tummy {
 
     pub async fn get_all_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
         sqlx::query_as::<_, Channel>("select * from channels")
-            .fetch_all(&self.tummy_conn_pool)
-            .await
-    }
-
-    pub async fn get_all_users(&self) -> Result<Vec<User>, sqlx::Error> {
-        sqlx::query_as::<_, User>("select * from users")
             .fetch_all(&self.tummy_conn_pool)
             .await
     }
