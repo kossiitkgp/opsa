@@ -29,7 +29,7 @@ mod handlers {
 
     #[derive(Deserialize)]
     pub struct Pagination {
-        last_msg_timestamp: String,
+        last_msg_timestamp: Option<String>,
         per_page: usize,
     }
 
