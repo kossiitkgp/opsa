@@ -34,4 +34,11 @@ impl Tummy {
             .fetch_all(&self.tummy_conn_pool)
             .await
     }
+
+    pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
+        sqlx::query_as::<_, Channel>("select * from channels where name = $1")
+            .bind(channel_name)
+            .fetch_one(&self.tummy_conn_pool)
+            .await
+    }
 }

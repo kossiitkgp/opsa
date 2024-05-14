@@ -64,18 +64,23 @@ mod handlers {
         }
     }
 
-    pub(super) async fn load_channel(Path(channel): Path<String>) -> (StatusCode, Response) {
-        (
-            StatusCode::OK,
-            Html(
-                templates::ChannelTemplate {
-                    channel: Channel { name: channel, purpose: "Nothing rn".into(), topic: "Hey if you are the frontend developer, make sure to ask someone to return the actual data.".into() },
-                }
-                .render()
-                .unwrap(),
-            )
-            .into_response(),
-        )
+    pub(super) async fn load_channel(
+        State(state): State<RouterState>,
+        Path(channel): Path<String>,
+    ) -> (StatusCode, Response) {
+        println!("{}", channel);
+        match state
+            .tummy
+            .get_channel_info(&channel)
+            .await
+            .map_err(internal_error)
+        {
+            Err(err) => err,
+            Ok(channel) => (
+                StatusCode::OK,
+                Html(templates::ChannelTemplate { channel }.render().unwrap()).into_response(),
+            ),
+        }
     }
 
     pub(super) async fn get_messages(
