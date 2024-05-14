@@ -1,6 +1,5 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
-use tracing::info;
 
 use crate::{
     env::EnvVars,
