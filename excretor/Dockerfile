@@ -3,6 +3,8 @@ FROM rust:slim
 WORKDIR /usr/src/myapp
 COPY . .
 
-RUN cargo install --path .
+RUN cargo fetch
+RUN cargo build --release
+RUN cp target/release/excretor /
 
-CMD ["excretor"]
+CMD ["/excretor"]
