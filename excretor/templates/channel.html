@@ -1,8 +1,10 @@
 <!-- templates/channel.html -->
-<div class="message-container">
+<div>
     <h1>#{{ channel.name }}</h1>
     <p><b>Topic</b>: {{ channel.topic }}</p>
     <p><b>Purpose</b>: {{ channel.purpose }}</p>
+</div>
+<div class="message-container">
     <div
         hx-get="/messages/{{ channel.name }}?per_page=10"
         hx-target="this"

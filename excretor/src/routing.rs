@@ -12,6 +12,7 @@ pub fn get_excretor_router(tummy: Tummy) -> Router {
         .route("/", get(handlers::root))
         .route("/channels/:channel", get(handlers::load_channel))
         .route("/messages/:channel", get(handlers::get_messages))
+        .route("/styles.css", get(handlers::styles))
         .with_state(RouterState { tummy })
 }
 
@@ -22,10 +23,12 @@ mod handlers {
     use axum::extract::{Path, Query, State};
     use axum::response::IntoResponse;
     use axum::{
+        body::Body,
         http::StatusCode,
         response::{Html, Response},
     };
     use serde::Deserialize;
+    use tokio_util::io::ReaderStream;
 
     #[derive(Deserialize)]
     pub struct Pagination {
@@ -118,5 +121,15 @@ mod handlers {
                 )
             }
         }
+    }
+    pub(super) async fn styles() -> impl IntoResponse {
+        let file = match tokio::fs::File::open("./templates/styles.css").await {
+            Ok(file) => file,
+            Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
+        };
+        let stream = ReaderStream::new(file);
+        let body = Body::from_stream(stream);
+    
+        Ok(body)
     }
 }
