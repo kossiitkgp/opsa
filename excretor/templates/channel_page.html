@@ -7,7 +7,7 @@
         hx-target=".message-container"
     ></div>
     {% for (message, user) in messages %}
-    <div class="message" id="{{ message.id }}">
+    <div class="message" id="{{ message.timestamp }}{{ message.user_id}}">
         <div class="user-info">
             <img class="avatar" src="{{ user.image_url }}" alt="User Avatar" />
             <span class="name">{{ user.name }}</span>

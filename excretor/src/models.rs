@@ -2,7 +2,6 @@ use sqlx::prelude::FromRow;
 
 #[derive(FromRow)]
 pub struct Message {
-    pub id: i32,
     pub channel_name: String,
     pub user_id: String,
     pub text: String,
@@ -16,7 +15,7 @@ pub struct Message {
 
 #[derive(FromRow)]
 pub struct User {
-    pub id: i32,
+    pub id: String,
     pub name: String,
     pub real_name: String,
     pub display_name: String,

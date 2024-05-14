@@ -93,7 +93,6 @@ mod handlers {
         {
             messages.push(
                 (Message {
-                    id: i as i32,
                     text: format!("Test message {}", i + 1),
                     channel_name: "idk yet".into(),
                     user_id: "A user.".into(),
@@ -106,7 +105,7 @@ mod handlers {
                     email: "backend_developer@hell.com".into(),
                     deleted: false,
                     is_bot: false,
-                    id: i as i32,
+                    id: i.to_string(),
                     name: format!("User {}", i + 1),
                     image_url: String::new(),
                 })
