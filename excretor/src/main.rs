@@ -6,6 +6,7 @@ use axum::{
     routing::get,
     Router,
 };
+use clap::Parser;
 use serde::Deserialize;
 
 mod env;
@@ -27,7 +28,7 @@ struct RouterState {
 #[tokio::main]
 async fn main() {
     // Read environment variables
-    let env_vars = env::EnvVars::init();
+    let env_vars = env::EnvVars::parse();
 
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();

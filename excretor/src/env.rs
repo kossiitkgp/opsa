@@ -1,24 +1,17 @@
-pub struct EnvVars {
-    pub excretor_port: String,
-    pub tummy_username: String,
-    pub tummy_db: String,
-    pub tummy_port: String,
-    pub tummy_host: String,
-    pub tummy_password: String,
-}
+use clap::Parser;
 
-impl EnvVars {
-    pub fn init() -> Self {
-        Self {
-            excretor_port: std::env::var_os("EXCRETOR_PORT")
-                .unwrap_or("3000".into())
-                .into_string()
-                .unwrap(),
-            tummy_username: std::env::var("TUMMY_USERNAME").unwrap(),
-            tummy_db: std::env::var("TUMMY_DB").unwrap(),
-            tummy_port: std::env::var("TUMMY_PORT").unwrap(),
-            tummy_host: std::env::var("TUMMY_HOST").unwrap(),
-            tummy_password: std::env::var("TUMMY_PASSWORD").unwrap(),
-        }
-    }
+#[derive(Parser)]
+pub struct EnvVars {
+    #[arg(env, default_value = "3000")]
+    pub excretor_port: String,
+    #[arg(env)]
+    pub tummy_username: String,
+    #[arg(env)]
+    pub tummy_db: String,
+    #[arg(env)]
+    pub tummy_port: String,
+    #[arg(env)]
+    pub tummy_host: String,
+    #[arg(env)]
+    pub tummy_password: String,
 }
