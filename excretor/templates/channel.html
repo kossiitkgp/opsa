@@ -4,7 +4,7 @@
     <p><b>Topic</b>: {{ channel.topic }}</p>
     <p><b>Purpose</b>: {{ channel.purpose }}</p>
     <div
-        hx-get="/messages/{{ channel.name }}?page=1&per_page=10"
+        hx-get="/messages/{{ channel.name }}&per_page=10"
         hx-target="this"
         hx-swap="outerHTML"
         hx-trigger="load"
