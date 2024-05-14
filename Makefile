@@ -8,23 +8,12 @@ endif
 
 CURRENT_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
-# List of all targets which are meant to be run by the user (should have a description)
-ALL_TARGETS := $(shell sed -n 's/^## //p' $(CURRENT_MAKEFILE) | awk -F ':' '{print $$1}')
-
 PROJECT_DIR := $(shell dirname $(realpath $(CURRENT_MAKEFILE)))
 TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status=running")
 
 default: build run
 
-.PHONY: ALL_TARGETS
-
-%:
-ifeq (, $(filter $(MAKECMDGOALS), $(ALL_TARGETS)))
-	@echo "Target '$(MAKECMDGOALS)' not found."
-	@echo ""
-	@$(MAKE) --no-print-directory help
-endif
-
+.PHONY: help build run stop digest run-digester check_clean clean
 
 ## help: Show this help message
 help:
@@ -84,3 +73,8 @@ check_clean:
 clean: check_clean
 	@docker volume rm $(notdir $(PROJECT_DIR))_$(DATABASE_VOLUME)
 	@echo "Database volume removed."
+
+%:
+	@echo "Target '$(MAKECMDGOALS)' not found."
+	@echo ""
+	@$(MAKE) --no-print-directory help
