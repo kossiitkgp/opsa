@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use crate::{
     env::EnvVars,
-    models::{Channel, MessageAndUser, User},
+    models::{Channel, MessageAndUser},
 };
 
 #[derive(Clone)]
@@ -41,13 +41,6 @@ impl Tummy {
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
         sqlx::query_as::<_, Channel>("select * from channels where name = $1")
             .bind(channel_name)
-            .fetch_one(&self.tummy_conn_pool)
-            .await
-    }
-
-    pub async fn get_user(&self, user_id: &str) -> Result<User, sqlx::Error> {
-        sqlx::query_as::<_, User>("select * from users where id = $1")
-            .bind(user_id)
             .fetch_one(&self.tummy_conn_pool)
             .await
     }
