@@ -52,7 +52,7 @@ impl Tummy {
         msgs_per_page: &usize,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
         sqlx::query_as::<_, MessageAndUser>(
-            "SELECT messages.*, uesrs.* FROM messages WHERE ts < $1 AND channel_name = $2 ORDER BY ts DESC LIMIT $3 INNER JOIN users ON users.id = messages.uesr_id",
+            "SELECT messages.*, users.* FROM messages WHERE ts < $1 AND channel_name = $2 ORDER BY ts DESC LIMIT $3 INNER JOIN users ON users.id = messages.uesr_id",
         )
         .bind(last_msg_timestamp)
         .bind(channel_name)
