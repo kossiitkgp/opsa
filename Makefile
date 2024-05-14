@@ -33,18 +33,21 @@ help:
 	@echo ""
 	@echo "Running 'make' without a target is equivalent to running 'make build run'."
 
-## build: Build the excreter and tummy docker images
+## build: Build the excretor and tummy docker images
 build:
-	$(DOCKER_COMPOSE) build
+	@echo "Building excretor and tummy docker images..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) build excretor tummy
 
-## run: Run the excreter and tummy docker containers
+## run: Run the excretor and tummy docker containers
 run:
-	$(DOCKER_COMPOSE) up -d
+	@echo "Running excretor and tummy docker containers..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up excretor tummy -d
 
-## stop: Stop the excreter and tummy docker containers
+## stop: Stop the excretor and tummy docker containers
 stop:
-	$(DOCKER_COMPOSE) stop
-	$(DOCKER_COMPOSE) down
+	@echo "Stopping excretor and tummy docker containers..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) stop excretor tummy
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down excretor tummy
 
 ## digest: Run the digester container
 digest:
@@ -53,17 +56,21 @@ ifeq (, $(FILE))
 	@exit 1;
 endif
 ifneq (, $(TUMMY_CONTAINER_ID))
-	$(MAKE) run-digester;
+	@echo "Tummy container is already running."
+	@$(MAKE) run-digester --no-print-directory;
 else
-	$(DOCKER_COMPOSE) up tummy -d; \
-	$(MAKE) run-digester; \
-	$(DOCKER_COMPOSE) down;
+	@echo "Starting tummy container..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d; \
+	@$(MAKE) run-digester --no-print-directory; \
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
 	@echo "Digestion complete."
 
 run-digester:
-	ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) -f docker-compose-digester.yml up --build --abort-on-container-exit; \
-	ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) -f docker-compose-digester.yml down; \
+	@echo ""
+	@echo "Building and running digester container..."
+	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) up digester --build --abort-on-container-exit; \
+	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) down digester; \
 
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."
