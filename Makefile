@@ -49,8 +49,8 @@ ifneq (, $(TUMMY_CONTAINER_ID))
 	@$(MAKE) run-digester --no-print-directory;
 else
 	@echo "Starting tummy container..."
-	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d; \
-	@$(MAKE) run-digester --no-print-directory; \
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d;
+	@$(MAKE) run-digester --no-print-directory;
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
 	@echo "Digestion complete."
@@ -58,8 +58,8 @@ endif
 run-digester:
 	@echo ""
 	@echo "Building and running digester container..."
-	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) up digester --build --abort-on-container-exit; \
-	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) down digester; \
+	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) up digester --build --abort-on-container-exit;
+	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) down digester;
 
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."
