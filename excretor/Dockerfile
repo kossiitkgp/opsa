@@ -2,9 +2,9 @@ FROM rust:slim
 
 WORKDIR /usr/src/myapp
 
-# Copy a dummy source file and Cargo.toml used to compile deps first
-COPY dummy.rs .
+# Create a dummy source file and Cargo.toml used to compile deps first
 COPY Cargo.toml .
+RUN echo "fn main {}" > ./dummy.rs
 
 # Replace source file path in Cargo.toml to dummy
 RUN sed -i 's#src/main.rs#dummy.rs#' Cargo.toml
