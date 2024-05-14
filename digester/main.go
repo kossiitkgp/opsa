@@ -246,9 +246,6 @@ func main() {
 					query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
 					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
 				}
-				if err != nil {
-					log.Println(message)
-				}
 				CheckError(err)
 				totalMessagesAddedCount++
 			}
