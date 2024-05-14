@@ -52,26 +52,26 @@ impl Tummy {
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
         if let Some(timestamp) = last_msg_timestamp {
-            sqlx::query_as::<_, MessageAndUser>(&format!(
+            sqlx::query_as::<_, MessageAndUser>(
                 "SELECT messages.*, users.*
-            FROM messages
-            INNER JOIN users ON users.id = messages.user_id
-            WHERE channel_name = $1 AND ts < $2
-            ORDER BY ts DESC LIMIT $3"
-            ))
+                FROM messages
+                INNER JOIN users ON users.id = messages.user_id
+                WHERE channel_name = $1 AND ts < $2
+                ORDER BY ts DESC LIMIT $3",
+            )
             .bind(channel_name)
             .bind(timestamp)
             .bind(i64::from(*msgs_per_page))
             .fetch_all(&self.tummy_conn_pool)
             .await
         } else {
-            sqlx::query_as::<_, MessageAndUser>(&format!(
+            sqlx::query_as::<_, MessageAndUser>(
                 "SELECT messages.*, users.*
-                        FROM messages
-                        INNER JOIN users ON users.id = messages.user_id
-                        WHERE channel_name = $1
-                        ORDER BY ts DESC LIMIT $2"
-            ))
+                FROM messages
+                INNER JOIN users ON users.id = messages.user_id
+                WHERE channel_name = $1
+                ORDER BY ts DESC LIMIT $2",
+            )
             .bind(channel_name)
             .bind(i64::from(*msgs_per_page))
             .fetch_all(&self.tummy_conn_pool)
