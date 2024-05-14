@@ -77,7 +77,7 @@ where
 
 // basic handler that responds with a static string
 async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
-    match state.tummy.get_channels().await.map_err(internal_error) {
+    match state.tummy.get_all_channels().await.map_err(internal_error) {
         Err(err) => err,
         Ok(channels) => (
             StatusCode::OK,
