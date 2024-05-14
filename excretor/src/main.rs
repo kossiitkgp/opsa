@@ -105,17 +105,18 @@ async fn get_messages(
     pagination: Query<Pagination>,
 ) -> (StatusCode, Response) {
     // Generate test messages
-    let mut messages: Vec<Message> = vec![];
+    let mut messages: Vec<(Message, User)> = vec![];
     for i in (pagination.page - 1) * pagination.per_page..pagination.page * pagination.per_page {
-        messages.push(Message {
-            id: i as i32,
-            text: format!("Test message {}", i + 1),
-            channel_name: "idk yet".into(),
-            user_id: "A user.".into(),
-            ts: "0".into(),
-            thread_ts: "0".into(),
-            parent_user_id: "Another user".into(),
-            user: User {
+        messages.push(
+            (Message {
+                id: i as i32,
+                text: format!("Test message {}", i + 1),
+                channel_name: "idk yet".into(),
+                user_id: "A user.".into(),
+                ts: "0".into(),
+                thread_ts: "0".into(),
+                parent_user_id: "Another user".into(),
+            },  User {
                 real_name: "Lmao the frontend devs are going to have a field day with this.".into(),
                 display_name: "Seriously though, the db has not yet been integrated here, so please bare with me.".into(),
                 email: "backend_developer@hell.com".into(),
@@ -124,8 +125,8 @@ async fn get_messages(
                 id: i as i32,
                 name: format!("User {}", i + 1),
                 image_url: String::new(),
-            },
-        })
+            })
+        );
     }
 
     (

@@ -6,11 +6,11 @@ pub struct Message {
     pub channel_name: String,
     pub user_id: String,
     pub text: String,
-    pub user: User,
     // Timestamp
     pub ts: String,
     // Thread timestamp
     pub thread_ts: String,
+    // If it is a thread, id of the user who sent the parent message
     pub parent_user_id: String,
 }
 

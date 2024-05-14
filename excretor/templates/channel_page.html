@@ -6,15 +6,11 @@
         hx-swap="beforeend"
         hx-target=".message-container"
     ></div>
-    {% for message in messages %}
+    {% for (message, user) in messages %}
     <div class="message" id="{{ message.id }}">
         <div class="user-info">
-            <img
-                class="avatar"
-                src="{{ message.user.image_url }}"
-                alt="User Avatar"
-            />
-            <span class="name">{{ message.user.name }}</span>
+            <img class="avatar" src="{{ user.image_url }}" alt="User Avatar" />
+            <span class="name">{{ user.name }}</span>
         </div>
         <div class="message-content">
             <p>{{ message.text }}</p>
