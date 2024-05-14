@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS channels (
 CREATE TABLE IF NOT EXISTS messages (
     channel_name TEXT NOT NULL,
     user_id TEXT NOT NULL,
-    ts TEXT NOT NULL,
+    ts TIMESTAMP(6) NOT NULL,
     msg_text TEXT NOT NULL,
-    thread_ts TEXT,
+    thread_ts TIMESTAMP(6),
     parent_user_id TEXT,
     PRIMARY KEY (channel_name, user_id, ts),
     FOREIGN KEY (user_id) REFERENCES users(id),
