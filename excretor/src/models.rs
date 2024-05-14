@@ -3,18 +3,32 @@ use sqlx::prelude::FromRow;
 #[derive(FromRow)]
 pub struct Message {
     pub id: i32,
+    pub channel_name: String,
+    pub user_id: String,
     pub text: String,
     pub user: User,
+    // Timestamp
+    pub ts: String,
+    // Thread timestamp
+    pub thread_ts: String,
+    pub parent_user_id: String,
 }
 
 #[derive(FromRow)]
 pub struct User {
     pub id: i32,
     pub name: String,
-    pub avatar_url: String,
+    pub real_name: String,
+    pub display_name: String,
+    pub image_url: String,
+    pub email: String,
+    pub deleted: bool,
+    pub is_bot: bool,
 }
 
 #[derive(FromRow)]
 pub struct Channel {
     pub name: String,
+    pub topic: String,
+    pub purpose: String,
 }
