@@ -92,8 +92,8 @@ mod handlers {
                     text: format!("Test message {}", i + 1),
                     channel_name: "idk yet".into(),
                     user_id: "A user.".into(),
-                    ts: "0".into(),
-                    thread_ts: "0".into(),
+                    timestamp: "0".into(),
+                    thread_timestamp: "0".into(),
                     parent_user_id: "Another user".into(),
                 },  User {
                     real_name: "Lmao the frontend devs are going to have a field day with this.".into(),
