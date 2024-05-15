@@ -93,3 +93,34 @@ body {
 .channel-header p {
   color: var(--text-secondary);
 }
+
+.message-container {
+  padding: 0.8rem 1.5rem;
+}
+
+.message {
+  margin: 1.5rem 0;
+  display: flex;
+  gap: 1rem;
+}
+
+.message .avatar {
+  width: 30px;
+  height: 30px;
+  transform: translateY(5px);
+  border-radius: 10px;
+}
+
+.message .message-inner-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.message .message-inner-container .name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.message .message-inner-container .message-content {
+  margin-top: 0.1rem;
+}
