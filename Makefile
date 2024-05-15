@@ -1,5 +1,7 @@
 DATABASE_VOLUME := food
 
+EXCRETOR_DEV_ENVS := $(shell grep -v '^#' .env) RUST_BACKTRACE=1
+
 ifeq (, $(shell which docker-compose))
     DOCKER_COMPOSE=docker compose
 else
@@ -13,7 +15,7 @@ TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status
 
 default: build run
 
-.PHONY: help build run stop digest run-digester check_clean clean
+.PHONY: help dev dev-stop build run stop digest run-digester check_clean clean
 
 ## help: Show this help message
 help:
@@ -21,6 +23,20 @@ help:
 	@sed -n 's/^##//p' $(CURRENT_MAKEFILE) | column -t -s ':' |  sed -e 's/^/ /'
 	@echo ""
 	@echo "Running 'make' without a target is equivalent to running 'make build run'."
+
+## dev: Run the excretor in development mode
+dev:
+	@echo "Starting tummy with exposed port"
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait
+	@echo ""
+	@echo "Starting excretor in development mode. Please run 'make dev-stop' to stop the tummy later."
+	@$(EXCRETOR_DEV_ENVS) cargo run --manifest-path excretor/Cargo.toml
+
+## dev-stop: Stop the tummy-dev docker container
+dev-stop:
+	@echo "Stopping tummy-dev docker container..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) stop tummy-dev
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down tummy-dev
 
 ## build: Build the excretor and tummy docker images
 build:

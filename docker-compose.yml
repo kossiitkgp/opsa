@@ -21,6 +21,23 @@ services:
         aliases:
           - tummy
 
+  tummy-dev:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${TUMMY_USERNAME}
+      - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
+      - POSTGRES_DB=tummy
+      - PGPORT=${TUMMY_PORT}
+      - PGHOST=localhost
+    volumes:
+      - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - food:/var/lib/postgresql/data
+    ports:
+      - "${TUMMY_PORT}:${TUMMY_PORT}"
+    networks:
+      - digestive-tract
+
   excretor:
     build: "./excretor"
     restart: always
