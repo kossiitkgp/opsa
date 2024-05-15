@@ -1,7 +1,10 @@
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::PgPoolOptions, types::chrono, PgPool};
 use std::time::Duration;
 
-use crate::{env::EnvVars, models::Channel};
+use crate::{
+    env::EnvVars,
+    models::{Channel, MessageAndUser},
+};
 
 #[derive(Clone)]
 pub struct Tummy {
@@ -33,5 +36,46 @@ impl Tummy {
         sqlx::query_as::<_, Channel>("select * from channels")
             .fetch_all(&self.tummy_conn_pool)
             .await
+    }
+
+    pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
+        sqlx::query_as::<_, Channel>("select * from channels where name = $1")
+            .bind(channel_name)
+            .fetch_one(&self.tummy_conn_pool)
+            .await
+    }
+
+    pub async fn fetch_msg_page(
+        &self,
+        channel_name: &str,
+        last_msg_timestamp: &Option<chrono::NaiveDateTime>,
+        msgs_per_page: &u32,
+    ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
+        if let Some(timestamp) = last_msg_timestamp {
+            sqlx::query_as::<_, MessageAndUser>(
+                "SELECT messages.*, users.*
+                FROM messages
+                INNER JOIN users ON users.id = messages.user_id
+                WHERE channel_name = $1 AND ts < $2
+                ORDER BY ts DESC LIMIT $3",
+            )
+            .bind(channel_name)
+            .bind(timestamp)
+            .bind(i64::from(*msgs_per_page))
+            .fetch_all(&self.tummy_conn_pool)
+            .await
+        } else {
+            sqlx::query_as::<_, MessageAndUser>(
+                "SELECT messages.*, users.*
+                FROM messages
+                INNER JOIN users ON users.id = messages.user_id
+                WHERE channel_name = $1
+                ORDER BY ts DESC LIMIT $2",
+            )
+            .bind(channel_name)
+            .bind(i64::from(*msgs_per_page))
+            .fetch_all(&self.tummy_conn_pool)
+            .await
+        }
     }
 }
