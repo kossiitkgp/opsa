@@ -1,5 +1,9 @@
 DATABASE_VOLUME := food
 
+EXCRETOR_DEV_ENVS := $(shell grep -v '^#' .env) RUST_BACKTRACE=1
+
+MAKEQ := $(MAKE) --no-print-directory
+
 ifeq (, $(shell which docker-compose))
     DOCKER_COMPOSE=docker compose
 else
@@ -13,7 +17,7 @@ TUMMY_CONTAINER_ID = $(shell docker ps -q --filter "name=tummy" --filter "status
 
 default: build run
 
-.PHONY: help build run stop digest run-digester check_clean clean
+.PHONY: help dev dev-stop build run stop digest run-digester check_clean clean
 
 ## help: Show this help message
 help:
@@ -21,6 +25,22 @@ help:
 	@sed -n 's/^##//p' $(CURRENT_MAKEFILE) | column -t -s ':' |  sed -e 's/^/ /'
 	@echo ""
 	@echo "Running 'make' without a target is equivalent to running 'make build run'."
+
+## dev: Run the excretor in development mode
+dev:
+	@echo "Starting tummy-dev with exposed port"
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait
+	@echo ""
+	@echo "Starting excretor in development mode."
+	@bash -c "trap 'echo ""; popd > /dev/null && $(MAKEQ) dev-stop; exit 0' SIGINT SIGTERM ERR; pushd $(PROJECT_DIR)/excretor/ > /dev/null && $(EXCRETOR_DEV_ENVS) cargo run"
+	# In case the excretor gracefully shuts down
+	@popd > /dev/null && $(MAKEQ) dev-stop
+
+## dev-stop: Stop the tummy-dev docker container
+dev-stop:
+	@echo "Stopping tummy-dev docker container..."
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) stop tummy-dev
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down tummy-dev
 
 ## build: Build the excretor and tummy docker images
 build:
@@ -46,11 +66,11 @@ ifeq (, $(FILE))
 endif
 ifneq (, $(TUMMY_CONTAINER_ID))
 	@echo "Tummy container is already running."
-	@$(MAKE) run-digester --no-print-directory;
+	@$(MAKEQ) run-digester;
 else
 	@echo "Starting tummy container..."
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d;
-	@$(MAKE) run-digester --no-print-directory;
+	@$(MAKEQ) run-digester;
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
 	@echo "Digestion complete."
@@ -78,5 +98,5 @@ clean: check_clean
 ifneq (, $(MAKECMDGOALS))
 	@echo "Target '$(MAKECMDGOALS)' not found."
 	@echo ""
-	@$(MAKE) --no-print-directory help
+	@$(MAKEQ) --no-print-directory help
 endif
