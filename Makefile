@@ -75,6 +75,8 @@ clean: check_clean
 	@echo "Database volume removed."
 
 %:
+ifneq (, $(MAKECMDGOALS))
 	@echo "Target '$(MAKECMDGOALS)' not found."
 	@echo ""
 	@$(MAKE) --no-print-directory help
+endif
