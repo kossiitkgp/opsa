@@ -13,6 +13,8 @@ pub fn get_excretor_router(tummy: Tummy) -> Router {
         .route("/channels/:channel", get(handlers::load_channel))
         .route("/messages/:channel", get(handlers::get_messages))
         .route("/styles.css", get(handlers::styles))
+        .route("/fallback-avatar", get(handlers::fallback_avatar))
+        .route("/avatar.png", get(handlers::fallback_avatar_png))
         .with_state(RouterState { tummy })
 }
 
@@ -134,5 +136,21 @@ mod handlers {
         let body = Body::from_stream(stream);
 
         Ok(body)
+    }
+    pub(super) async fn fallback_avatar_png() -> impl IntoResponse {
+        let file = match tokio::fs::File::open("./templates/avatar.png").await {
+            Ok(file) => file,
+            Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
+        };
+        let stream = ReaderStream::new(file);
+        let body = Body::from_stream(stream);
+
+        Ok(body)
+    }
+    pub(super) async fn fallback_avatar() -> (StatusCode, Response) {
+        (
+            StatusCode::OK,
+            Html(templates::FallbackAvatarTemplate.render().unwrap()).into_response(),
+        )
     }
 }

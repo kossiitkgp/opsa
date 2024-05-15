@@ -30,3 +30,7 @@ pub struct ChannelPageTemplate {
     pub last_msg_timestamp: String,
     pub channel_name: String,
 }
+
+#[derive(Template)]
+#[template(path = "fallback_avatar.html")]
+pub struct FallbackAvatarTemplate;

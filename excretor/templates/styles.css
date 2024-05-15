@@ -109,6 +109,14 @@ body {
   height: 30px;
   transform: translateY(5px);
   border-radius: 10px;
+  object-fit: cover;
+}
+
+.message .fallback-avatar {
+  width: 30px;
+  height: 30px;
+  transform: translateY(5px);
+  border-radius: 10px;
 }
 
 .message .message-inner-container {
