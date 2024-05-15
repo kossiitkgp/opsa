@@ -18,6 +18,9 @@ pub struct Tummy {
 pub fn get_formatted_timestamp(timestamp: &NaiveDateTime) -> String {
     timestamp.format("%d %b %Y @ %I:%M %p").to_string()
 }
+pub fn str_to_datetime(ts_string: &String) -> NaiveDateTime {
+    chrono::NaiveDateTime::parse_from_str(ts_string, "%Y-%m-%d %X%.f").unwrap()
+}
 
 impl Tummy {
     pub async fn init(env_vars: &EnvVars) -> Self {
