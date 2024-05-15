@@ -2,6 +2,8 @@ DATABASE_VOLUME := food
 
 EXCRETOR_DEV_ENVS := $(shell grep -v '^#' .env) RUST_BACKTRACE=1
 
+MAKEQ := $(MAKE) --no-print-directory
+
 ifeq (, $(shell which docker-compose))
     DOCKER_COMPOSE=docker compose
 else
@@ -26,13 +28,13 @@ help:
 
 ## dev: Run the excretor in development mode
 dev:
-	@echo "Starting tummy with exposed port"
+	@echo "Starting tummy-dev with exposed port"
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait
 	@echo ""
 	@echo "Starting excretor in development mode."
-	@bash -c "trap 'echo ""; popd > /dev/null && $(MAKE) --no-print-directory dev-stop; exit 0' SIGINT SIGTERM ERR; pushd $(PROJECT_DIR)/excretor/ > /dev/null && $(EXCRETOR_DEV_ENVS) cargo run"
+	@bash -c "trap 'echo ""; popd > /dev/null && $(MAKEQ) dev-stop; exit 0' SIGINT SIGTERM ERR; pushd $(PROJECT_DIR)/excretor/ > /dev/null && $(EXCRETOR_DEV_ENVS) cargo run"
 	# In case the excretor gracefully shuts down
-	@popd > /dev/null && $(MAKE) dev-stop
+	@popd > /dev/null && $(MAKEQ) dev-stop
 
 ## dev-stop: Stop the tummy-dev docker container
 dev-stop:
@@ -64,11 +66,11 @@ ifeq (, $(FILE))
 endif
 ifneq (, $(TUMMY_CONTAINER_ID))
 	@echo "Tummy container is already running."
-	@$(MAKE) run-digester --no-print-directory;
+	@$(MAKEQ) run-digester;
 else
 	@echo "Starting tummy container..."
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d;
-	@$(MAKE) run-digester --no-print-directory;
+	@$(MAKEQ) run-digester;
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
 	@echo "Digestion complete."
@@ -96,5 +98,5 @@ clean: check_clean
 ifneq (, $(MAKECMDGOALS))
 	@echo "Target '$(MAKECMDGOALS)' not found."
 	@echo ""
-	@$(MAKE) --no-print-directory help
+	@$(MAKEQ) --no-print-directory help
 endif
