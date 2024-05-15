@@ -21,6 +21,12 @@
 </div>
 
 <div class="channel-content">
-  <div id="channel-content"></div>
+  <div
+    id="channel-content"
+    hx-trigger="load"
+    hx-target="this"
+    hx-get="/channels/general?page=1&per_page=10"
+    hx-swap="outerHTML"
+  ></div>
 </div>
 {% endblock %}
