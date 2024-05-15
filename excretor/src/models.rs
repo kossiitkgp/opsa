@@ -1,4 +1,4 @@
-use sqlx::prelude::FromRow;
+use sqlx::{prelude::FromRow, types::chrono};
 
 #[derive(FromRow)]
 pub struct Message {
@@ -7,9 +7,9 @@ pub struct Message {
     #[sqlx(rename = "msg_text")]
     pub text: String,
     #[sqlx(rename = "ts")]
-    pub timestamp: String,
+    pub timestamp: chrono::NaiveDateTime,
     #[sqlx(rename = "thread_ts")]
-    pub thread_timestamp: String,
+    pub thread_timestamp: Option<chrono::NaiveDateTime>,
     // If it is a thread, id of the user who sent the parent message
     pub parent_user_id: String,
 }

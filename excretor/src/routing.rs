@@ -26,6 +26,7 @@ mod handlers {
         response::{Html, Response},
     };
     use serde::Deserialize;
+    use sqlx::types::chrono;
 
     #[derive(Deserialize)]
     pub struct Pagination {
@@ -86,11 +87,15 @@ mod handlers {
         Path(channel_name): Path<String>,
         pagination: Query<Pagination>,
     ) -> (StatusCode, Response) {
+        println!("Timestamp {:?}", &pagination.last_msg_timestamp);
+
         match state
             .tummy
             .fetch_msg_page(
                 &channel_name,
-                &pagination.last_msg_timestamp,
+                &pagination.last_msg_timestamp.as_ref().map(|ts_string| {
+                    chrono::NaiveDateTime::parse_from_str(ts_string, "%Y-%m-%d %X%.f").unwrap()
+                }),
                 &pagination.per_page,
             )
             .await
@@ -100,15 +105,15 @@ mod handlers {
             Ok(messages) => {
                 let new_last_msg_timestamp = messages
                     .last()
-                    .map(|msg| msg.message.timestamp.clone())
-                    .unwrap_or("0".into());
+                    .map(|msg| msg.message.timestamp)
+                    .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
 
                 (
                     StatusCode::OK,
                     Html(
                         templates::ChannelPageTemplate {
                             messages,
-                            last_msg_timestamp: new_last_msg_timestamp,
+                            last_msg_timestamp: new_last_msg_timestamp.to_string(),
                             channel_name,
                         }
                         .render()

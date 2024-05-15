@@ -1,4 +1,4 @@
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::PgPoolOptions, types::chrono, PgPool};
 use std::time::Duration;
 
 use crate::{
@@ -48,7 +48,7 @@ impl Tummy {
     pub async fn fetch_msg_page(
         &self,
         channel_name: &str,
-        last_msg_timestamp: &Option<String>,
+        last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
         if let Some(timestamp) = last_msg_timestamp {
