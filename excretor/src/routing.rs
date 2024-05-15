@@ -87,8 +87,6 @@ mod handlers {
         Path(channel_name): Path<String>,
         pagination: Query<Pagination>,
     ) -> (StatusCode, Response) {
-        println!("Timestamp {:?}", &pagination.last_msg_timestamp);
-
         match state
             .tummy
             .fetch_msg_page(
