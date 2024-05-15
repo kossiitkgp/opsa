@@ -29,8 +29,8 @@ dev:
 	@echo "Starting tummy with exposed port"
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait
 	@echo ""
-	@echo "Starting excretor in development mode. Please run 'make dev-stop' to stop the tummy later."
-	@$(EXCRETOR_DEV_ENVS) cargo run --manifest-path excretor/Cargo.toml
+	@echo "Starting excretor in development mode."
+	@bash -c "trap 'echo ""; $(MAKE) dev-stop; exit 0' SIGINT SIGTERM ERR; $(EXCRETOR_DEV_ENVS) cargo run --manifest-path excretor/Cargo.toml"
 
 ## dev-stop: Stop the tummy-dev docker container
 dev-stop:
