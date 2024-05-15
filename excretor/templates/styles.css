@@ -5,8 +5,8 @@
   --silver-2: #ccccccff;
   --white-smoke: #f2f2f2ff;
 
-  --text-primary: var(--davys-gray);
-  --text-secondary: var(--gray);
+  --text-primary: #333;
+  --text-secondary: var(--davys-gray);
 
   --background-primary: #fcfcfc;
   --background-secondary: var(--silver-2);
@@ -24,6 +24,7 @@
 body {
   font-family: system-ui, -apple-system, sans-serif;
   background-color: var(--background-primary);
+  color: var(--text-primary);
 }
 
 #app {
@@ -78,4 +79,17 @@ body {
   height: 100%;
   width: calc(100% - 300px);
   overflow-y: scroll;
+}
+
+.channel-header {
+  padding: 0.8rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.channel-header h1 {
+  margin-bottom: 1rem;
+}
+
+.channel-header p {
+  color: var(--text-secondary);
 }
