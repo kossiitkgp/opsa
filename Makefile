@@ -31,6 +31,8 @@ dev:
 	@echo ""
 	@echo "Starting excretor in development mode."
 	@bash -c "trap 'echo ""; $(MAKE) dev-stop; exit 0' SIGINT SIGTERM ERR; $(EXCRETOR_DEV_ENVS) cargo run --manifest-path excretor/Cargo.toml"
+	# In case the excretor gracefully shuts down
+	@$(MAKE) dev-stop
 
 ## dev-stop: Stop the tummy-dev docker container
 dev-stop:
