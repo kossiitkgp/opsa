@@ -9,9 +9,9 @@ pub struct EnvVars {
     #[arg(env)]
     pub tummy_password: String,
     #[arg(env)]
-    pub static_assets_dir: PathBuf,
-    #[arg(env)]
     pub tummy_port: String,
+    #[arg(env, default_value = "assets/")]
+    pub static_assets_dir: PathBuf,
     #[arg(env, default_value = "tummy")]
     pub tummy_db: String,
     #[arg(env, default_value = "localhost")]
