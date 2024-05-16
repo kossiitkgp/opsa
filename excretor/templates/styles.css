@@ -1,18 +1,15 @@
 :root {
-  --davys-gray: #595959ff;
-  --gray: #7f7f7fff;
-  --silver: rgb(182, 182, 182);
-  --silver-2: #ccccccff;
-  --white-smoke: #f2f2f2ff;
-
   --text-primary: #333;
-  --text-secondary: var(--davys-gray);
+  --text-secondary: #555;
 
   --background-primary: #fcfcfc;
-  --background-secondary: var(--silver-2);
   --sidebar-background: #f0f0f0;
   --sidebar-hover: #d0d0d0;
   --border-color: #e0e0e0;
+
+  --sidebar-width: 300px;
+  --channel-header-height: 130px;
+  --avatar-size: 30px;
 }
 
 * {
@@ -38,7 +35,7 @@ body {
 }
 
 .channels-sidebar {
-  width: 300px;
+  width: var(--sidebar-width);
   height: 100%;
   background-color: var(--sidebar-background);
   border-right: 1px solid var(--border-color);
@@ -77,11 +74,11 @@ body {
 
 .channel-content {
   height: 100%;
-  width: calc(100% - 300px);
+  width: calc(100% - var(--sidebar-width));
 }
 
 .channel-header {
-  height: 130px;
+  height: var(--channel-header-height);
   padding: 0.8rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
 }
@@ -95,7 +92,7 @@ body {
 }
 
 .message-container {
-  height: calc(100vh - 130px);
+  height: calc(100vh - var(--channel-header-height));
   padding: 0.5rem 1.5rem;
   overflow-y: scroll;
 }
@@ -107,16 +104,16 @@ body {
 }
 
 .message .avatar {
-  width: 30px;
-  height: 30px;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
   transform: translateY(5px);
   border-radius: 10px;
   object-fit: cover;
 }
 
 .message .fallback-avatar {
-  width: 30px;
-  height: 30px;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
   transform: translateY(5px);
   border-radius: 10px;
 }
