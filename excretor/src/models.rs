@@ -12,6 +12,8 @@ pub struct Message {
     pub thread_timestamp: Option<chrono::NaiveDateTime>,
     // If it is a thread, id of the user who sent the parent message
     pub parent_user_id: String,
+    #[sqlx(skip)]
+    pub formatted_timestamp: String,
 }
 
 #[derive(FromRow)]
