@@ -1,4 +1,8 @@
-use sqlx::{postgres::PgPoolOptions, types::chrono, PgPool};
+use sqlx::{
+    postgres::PgPoolOptions,
+    types::chrono::{self, NaiveDateTime},
+    PgPool,
+};
 use std::time::Duration;
 
 use crate::{
@@ -9,6 +13,10 @@ use crate::{
 #[derive(Clone)]
 pub struct Tummy {
     tummy_conn_pool: PgPool,
+}
+
+pub fn get_formatted_timestamp(timestamp: &NaiveDateTime) -> String {
+    timestamp.format("%d %b %Y @ %I:%M %p").to_string()
 }
 
 impl Tummy {
@@ -51,7 +59,7 @@ impl Tummy {
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
-        if let Some(timestamp) = last_msg_timestamp {
+        let mut fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             sqlx::query_as::<_, MessageAndUser>(
                 "SELECT messages.*, users.*
                 FROM messages
@@ -76,6 +84,12 @@ impl Tummy {
             .bind(i64::from(*msgs_per_page))
             .fetch_all(&self.tummy_conn_pool)
             .await
-        }
+        }?;
+
+        fetched_messages.iter_mut().for_each(|msg| {
+            msg.message.formatted_timestamp = get_formatted_timestamp(&msg.message.timestamp)
+        });
+
+        Ok(fetched_messages)
     }
 }
