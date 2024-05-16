@@ -1,21 +1,20 @@
-use crate::tummy::Tummy;
+use crate::{env::EnvVars, tummy::Tummy};
 use axum::{routing::get, Router};
 
 #[derive(Clone)]
 struct RouterState {
     pub tummy: Tummy,
+    pub env_vars: EnvVars,
 }
 
-pub fn get_excretor_router(tummy: Tummy) -> Router {
+pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
     Router::new()
         // `GET /` goes to `root`
         .route("/", get(handlers::root))
         .route("/channels/:channel", get(handlers::load_channel))
         .route("/messages/:channel", get(handlers::get_messages))
-        .route("/styles.css", get(handlers::styles))
-        .route("/fallback-avatar", get(handlers::fallback_avatar))
-        .route("/avatar.png", get(handlers::fallback_avatar_png))
-        .with_state(RouterState { tummy })
+        .route("/assets/*file", get(handlers::assets))
+        .with_state(RouterState { tummy, env_vars })
 }
 
 mod handlers {
@@ -127,30 +126,47 @@ mod handlers {
             }
         }
     }
-    pub(super) async fn styles() -> impl IntoResponse {
-        let file = match tokio::fs::File::open("./templates/styles.css").await {
-            Ok(file) => file,
-            Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
-        };
-        let stream = ReaderStream::new(file);
-        let body = Body::from_stream(stream);
 
-        Ok(body)
-    }
-    pub(super) async fn fallback_avatar_png() -> impl IntoResponse {
-        let file = match tokio::fs::File::open("./templates/avatar.png").await {
-            Ok(file) => file,
-            Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
-        };
-        let stream = ReaderStream::new(file);
-        let body = Body::from_stream(stream);
+    pub(super) async fn assets(
+        State(state): State<RouterState>,
+        Path(filepath): Path<String>,
+    ) -> (StatusCode, Response) {
+        // TODO: Remove the unwrap once axum error handling is oxidized. (Issue #27)
+        let final_file_path = state
+            .env_vars
+            .static_assets_dir
+            .join(&filepath)
+            .canonicalize()
+            .unwrap();
 
-        Ok(body)
-    }
-    pub(super) async fn fallback_avatar() -> (StatusCode, Response) {
-        (
-            StatusCode::OK,
-            Html(templates::FallbackAvatarTemplate.render().unwrap()).into_response(),
-        )
+        if final_file_path.starts_with(state.env_vars.static_assets_dir) {
+            match tokio::fs::File::open(final_file_path).await {
+                Ok(file) => {
+                    let stream = ReaderStream::new(file);
+                    let body = Body::from_stream(stream);
+
+                    (StatusCode::OK, body.into_response())
+                }
+                Err(err) => {
+                    tracing::warn!("Error while serving asset file `{}`: {}", filepath, err);
+
+                    (
+                        StatusCode::NOT_FOUND,
+                        Body::from(String::from("The requested file was not found."))
+                            .into_response(),
+                    )
+                }
+            }
+        } else {
+            tracing::warn!(
+                "A mortal requested to access forbidden file `{}`.",
+                filepath
+            );
+
+            (
+            	StatusCode::FORBIDDEN,
+             	Body::from(String::from("Mortals are forbidden from accessing the requested file. This sin will be reported.")).into_response()
+            )
+        }
     }
 }
