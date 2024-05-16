@@ -1,26 +1,29 @@
 <!-- templates/channel_page.html -->
 <div id="page-since-{{last_msg_timestamp}}">
-  {% for message_and_user in messages %}
-  <div class="message" id="{{ message_and_user.message.timestamp }}{{ message_and_user.message.user_id}}">
-    <img
-      class="avatar"
-      src="{{ message_and_user.user.image_url }}"
-      alt="User Avatar"
-      hx-trigger="error"
-      hx-swap="outerHTML"
-      hx-get="/fallback-avatar"
-      hx-target="this"
-    />
-    <div class="message-inner-container">
-      <span class="name">{{ message_and_user.user.name }}</span>
-      <p class="message-content">{{ message_and_user.message.text }}</p>
+    {% for message_and_user in messages %}
+    <div
+        class="message"
+        id="{{ message_and_user.message.timestamp }}{{ message_and_user.message.user_id}}"
+    >
+        <img
+            class="avatar"
+            src="{{ message_and_user.user.image_url }}"
+            alt="User Avatar"
+            hx-trigger="error"
+            hx-swap="outerHTML"
+            hx-get="/fallback-avatar"
+            hx-target="this"
+        />
+        <div class="message-inner-container">
+            <span class="name">{{ message_and_user.user.name }}</span>
+            <p class="message-content">{{ message_and_user.message.text }}</p>
+        </div>
     </div>
-  </div>
-  {% endfor %}
-  <div
-    hx-get="/messages/{{ channel_name }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10"
-    hx-trigger="intersect once"
-    hx-swap="beforeend"
-    hx-target=".message-container"
-  ></div>
+    {% endfor %}
+    <div
+        hx-get="/messages/{{ channel_name }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10"
+        hx-trigger="intersect once"
+        hx-swap="beforeend"
+        hx-target=".message-container"
+    ></div>
 </div>
