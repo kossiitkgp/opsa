@@ -123,9 +123,20 @@ body {
     flex-direction: column;
 }
 
-.message .message-inner-container .name {
+.message .message-inner-container .user-and-time {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.message .message-inner-container .user-and-time .name {
     font-size: 1rem;
     font-weight: 600;
+}
+
+.message .message-inner-container .user-and-time .time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .message .message-inner-container .message-content {

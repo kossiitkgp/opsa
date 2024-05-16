@@ -15,7 +15,12 @@
             hx-target="this"
         />
         <div class="message-inner-container">
-            <span class="name">{{ message_and_user.user.name }}</span>
+            <div class="user-and-time">
+                <span class="name">{{ message_and_user.user.name }}</span>
+                <span class="time">
+                    {{ message_and_user.message.timestamp }}
+                </span>
+            </div>
             <p class="message-content">{{ message_and_user.message.text }}</p>
         </div>
     </div>
