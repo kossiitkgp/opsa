@@ -13,6 +13,7 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/", get(handlers::root))
         .route("/channels/:channel", get(handlers::load_channel))
         .route("/messages/:channel", get(handlers::get_messages))
+        .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/assets/*file", get(handlers::assets))
         .with_state(RouterState { tummy, env_vars })
 }
@@ -125,6 +126,13 @@ mod handlers {
                 )
             }
         }
+    }
+
+    pub(super) async fn fallback_avatar() -> (StatusCode, Response) {
+        (
+            StatusCode::OK,
+            Html(templates::FallbackAvatarTemplate.render().unwrap()).into_response(),
+        )
     }
 
     pub(super) async fn assets(
