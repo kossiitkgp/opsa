@@ -51,6 +51,7 @@ services:
       - TUMMY_DB=tummy
       - TUMMY_PORT=${TUMMY_PORT}
       - TUMMY_HOST=tummy
+      - STATIC_ASSETS_DIR=${STATIC_ASSETS_DIR}
     ports:
       - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
     networks:
