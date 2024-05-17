@@ -139,10 +139,6 @@ body {
     color: var(--text-secondary);
 }
 
-.message .message-inner-container .message-content {
-    margin-top: 0.1rem;
-}
-
 .message .message-inner-container .user-mention {
     color: blue;
 }
@@ -153,4 +149,53 @@ body {
 
 .message .message-inner-container .broadcast-mention {
     color: blue;
+}
+
+.message .message-inner-container .message-content {
+    margin-top: 0.2rem;
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
+.message .message-inner-container .message-content p:not(:first-child) {
+    margin: 0.4rem 0;
+}
+
+.message .message-inner-container .message-content ul {
+    margin: 0 0 0.8rem 2rem;
+}
+
+.message .message-inner-container .message-content ol {
+    margin: 0 0 0.8rem 2rem;
+}
+
+.message .message-inner-container .message-content blockquote {
+    display: inline-block;
+    margin: 0.4rem 0;
+    padding: 0.2rem 0.8rem;
+    border-left: 4px solid #ccc;
+}
+
+.message .message-inner-container .message-content code {
+    display: inline-block;
+    font-size: 1rem;
+    font-family: monospace;
+    color: orangered;
+    background-color: rgba(255, 220, 154, 0.4);
+    border-radius: 5px;
+    padding: 0rem 0.4rem;
+    padding-top: 5px;
+    margin: 0 0.3rem;
+}
+
+.message .message-inner-container .message-content pre {
+    margin: 0.4rem 0;
+    padding: 0.5rem;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+.message .message-inner-container .message-content pre code {
+    background-color: transparent;
+    color: var(--text-primary);
 }
