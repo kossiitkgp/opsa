@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-	"unicode"
 )
 
 type Block struct {
@@ -71,7 +69,7 @@ func parseText(element Element) string {
 
 	leadingSpacesCount := 0
 	for _, char := range element.Text {
-		if unicode.IsSpace(char) {
+		if char == ' ' {
 			leadingSpacesCount++
 		} else {
 			break
@@ -84,14 +82,14 @@ func parseText(element Element) string {
 
 	trailingSpacesCount := 0
 	for i := len(element.Text) - 1; i >= 0; i-- {
-		if unicode.IsSpace(rune(element.Text[i])) {
+		if element.Text[i] == ' ' {
 			trailingSpacesCount++
 		} else {
 			break
 		}
 	}
 
-	result = strings.TrimSpace(element.Text)
+	result = element.Text[leadingSpacesCount : len(element.Text)-trailingSpacesCount]
 
 	if element.Style.TextStyle.Bold {
 		result = "**" + result + "**"
