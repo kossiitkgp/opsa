@@ -40,13 +40,15 @@ type Channel struct {
 
 type Message struct {
 	Channel         string
-	UserID          string `json:"user"`
-	BotID           string `json:"bot_id"`
-	BotUsername     string `json:"username"`
-	Timestamp       string `json:"ts"`
-	Text            string `json:"text"`
-	ThreadTimestamp string `json:"thread_ts"`
-	ParentUserID    string `json:"parent_user_id"`
+	SubType         string  `json:"subtype"`
+	UserID          string  `json:"user"`
+	BotID           string  `json:"bot_id"`
+	BotUsername     string  `json:"username"`
+	Timestamp       string  `json:"ts"`
+	Text            string  `json:"text"`
+	ThreadTimestamp string  `json:"thread_ts"`
+	ParentUserID    string  `json:"parent_user_id"`
+	Blocks          []Block `json:"blocks"`
 }
 
 const (
@@ -57,7 +59,11 @@ const (
 	SLACKBOT_ID       = "USLACKBOT"
 )
 
-var db *sql.DB
+var (
+	db       *sql.DB
+	users    []User
+	channels []Channel
+)
 
 func CheckError(err error) {
 	if err != nil {
@@ -148,7 +154,7 @@ func main() {
 
 	usersFile, err := os.ReadFile(USERS_FILEPATH)
 	CheckError(err)
-	var users []User
+
 	err = json.Unmarshal(usersFile, &users)
 	CheckError(err)
 	log.Println("Digester found " + fmt.Sprint(len(users)) + " users.")
@@ -176,7 +182,7 @@ func main() {
 
 	channelsFile, err := os.ReadFile(CHANNELS_FILEPATH)
 	CheckError(err)
-	var channels []Channel
+
 	err = json.Unmarshal(channelsFile, &channels)
 	CheckError(err)
 	log.Println("Digester found " + fmt.Sprint(len(channels)) + " channels.")
@@ -239,12 +245,26 @@ func main() {
 					}
 				}
 
+				text := ""
+				if message.SubType == "channel_join" {
+					text = "<em>Joined the channel</em>"
+				} else if message.SubType == "channel_archive" {
+					text = "<em>Archived the channel</em>"
+				} else if message.SubType == "channel_leave" {
+					text = "<em>Left the channel</em>"
+				} else if len(message.Blocks) > 0 {
+					text = parseMessage(message.Blocks)
+				}
+				if text == "" {
+					text = message.Text
+				}
+
 				if message.ThreadTimestamp != "" {
 					query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
-					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
+					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, text, message.ParentUserID, message.ThreadTimestamp)
 				} else {
 					query := "INSERT INTO messages (channel_name, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
-					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
+					_, err = db.Exec(query, message.Channel, message.UserID, message.Timestamp, text, message.ParentUserID)
 				}
 				CheckError(err)
 				totalMessagesAddedCount++

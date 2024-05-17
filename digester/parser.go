@@ -16,16 +16,18 @@ type Block struct {
 }
 
 type Element struct {
-	Type      string    `json:"type"`
-	Elements  []Element `json:"elements"`
-	Text      string    `json:"text"`
-	Style     Style     `json:"style"`
-	Indent    int       `json:"indent"`
-	Border    int       `json:"border"`
-	EmojiName string    `json:"name"`
-	URL       string    `json:"url"`
-	UserID    string    `json:"user_id"`
-	ChannelID string    `json:"channel_id"`
+	Type           string    `json:"type"`
+	Elements       []Element `json:"elements"`
+	Text           string    `json:"text"`
+	Style          Style     `json:"style"`
+	Indent         int       `json:"indent"`
+	Border         int       `json:"border"`
+	EmojiName      string    `json:"name"`
+	URL            string    `json:"url"`
+	UserID         string    `json:"user_id"`
+	ChannelID      string    `json:"channel_id"`
+	BroadcastRange string    `json:"range"`
+	ColorValue     string    `json:"value"`
 }
 
 type Style struct {
@@ -213,6 +215,14 @@ func parseChannel(element Element) string {
 	return "<div class=\"channel-mention\">" + result + "</div>"
 }
 
+func parseBroadcast(element Element) string {
+	result := "@" + element.BroadcastRange
+	if result == "@" {
+		result += "unknown-broadcast"
+	}
+	return "<div class=\"broadcast-mention\">" + result + "</div>"
+}
+
 func parseElement(element Element) string {
 	result := ""
 
@@ -225,6 +235,10 @@ func parseElement(element Element) string {
 		result = parseUser(element)
 	case "channel":
 		result = parseChannel(element)
+	case "broadcast":
+		result = parseBroadcast(element)
+	case "color":
+		result = element.ColorValue
 	case "link":
 		result = "[" + element.Text + "](" + element.URL + ")"
 	case "rich_text_section":
@@ -247,6 +261,11 @@ func parseElement(element Element) string {
 func parseBlock(block Block) string {
 	result := ""
 
+	if block.Type != "rich_text" {
+		fmt.Println("[WARNING] Block is of unknown type: " + block.Type + " (skipping)")
+		return result
+	}
+
 	for _, element := range block.Elements {
 		result += parseElement(element)
 	}
@@ -254,7 +273,7 @@ func parseBlock(block Block) string {
 	return result
 }
 
-func parse(blocks []Block) string {
+func parseMessage(blocks []Block) string {
 	result := ""
 
 	for _, block := range blocks {
