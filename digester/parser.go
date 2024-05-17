@@ -3,6 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 )
 
 type Block struct {
@@ -140,7 +145,7 @@ func addIndent(text string, indent int) string {
 }
 
 func parseList(element Element) string {
-	result := ""
+	result := "\n"
 
 	if !element.Style.IsList {
 		fmt.Println("[WARNING] Element is not list")
@@ -172,34 +177,40 @@ func parseQuote(element Element) string {
 	for _, subElement := range element.Elements {
 		result += parseElement(subElement)
 	}
+	result = strings.ReplaceAll(result, "\n", "\n> ")
 
 	return addBorder(result, 1) + "\n\n"
 }
 
 func parsePreformatted(element Element) string {
-	result := "\n"
-	result += addBorder("```", element.Border)
-	result += "\n"
+	result := "```\n"
 	for _, subElement := range element.Elements {
-		result += addBorder(parseElement(subElement), element.Border)
+		result += parseElement(subElement)
 	}
-	result += "\n"
-	result += addBorder("```", element.Border)
+	result += "\n```"
 
 	return result
 }
 
 func parseUser(element Element) string {
 	result := "@"
-
 	for _, user := range users {
 		if user.ID == element.UserID {
 			result += user.Name
-			return result
 		}
 	}
+	if result == "@" {
+		result += "unknown-user"
+	}
+	return "<div class=\"user-mention\">" + result + "</div>"
+}
 
-	return result + "unknown-user"
+func parseChannel(element Element) string {
+	result := "#" + element.ChannelID
+	if result == "#" {
+		result += "unknown-channel"
+	}
+	return "<div class=\"channel-mention\">" + result + "</div>"
 }
 
 func parseElement(element Element) string {
@@ -213,7 +224,7 @@ func parseElement(element Element) string {
 	case "user":
 		result = parseUser(element)
 	case "channel":
-		result = "#" + element.ChannelID
+		result = parseChannel(element)
 	case "link":
 		result = "[" + element.Text + "](" + element.URL + ")"
 	case "rich_text_section":
@@ -247,8 +258,16 @@ func parse(blocks []Block) string {
 	result := ""
 
 	for _, block := range blocks {
-		result += parseBlock(block)
+		result += parseBlock(block) + "\n\n"
 	}
 
-	return result
+	extensions := parser.CommonExtensions
+	parser := parser.NewWithExtensions(extensions)
+	doc := parser.Parse([]byte(strings.TrimSpace(result)))
+
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	return string(markdown.Render(doc, renderer))
 }
