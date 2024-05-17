@@ -87,7 +87,11 @@ impl Tummy {
         }?;
 
         fetched_messages.iter_mut().for_each(|msg| {
-            msg.message.formatted_timestamp = get_formatted_timestamp(&msg.message.timestamp)
+            msg.message.formatted_timestamp = get_formatted_timestamp(&msg.message.timestamp);
+
+            if msg.user.image_url.is_empty() {
+                msg.user.image_url = "/assets/avatar.png".into();
+            }
         });
 
         Ok(fetched_messages)
