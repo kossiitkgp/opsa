@@ -142,3 +142,15 @@ body {
 .message .message-inner-container .message-content {
     margin-top: 0.1rem;
 }
+
+.message .message-inner-container .user-mention {
+    color: blue;
+}
+
+.message .message-inner-container .channel-mention {
+    color: blue;
+}
+
+.message .message-inner-container .broadcast-mention {
+    color: blue;
+}
