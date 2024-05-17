@@ -1,5 +1,7 @@
 use sqlx::{prelude::FromRow, types::chrono};
 
+use crate::tummy::SlackDateTime;
+
 #[derive(FromRow)]
 pub struct Message {
     pub channel_name: String,
@@ -14,6 +16,12 @@ pub struct Message {
     pub parent_user_id: String,
     #[sqlx(skip)]
     pub formatted_timestamp: String,
+}
+
+impl Message {
+    pub fn set_formatted_timestamp(&mut self) {
+        self.formatted_timestamp = self.timestamp.human_format();
+    }
 }
 
 #[derive(FromRow)]
@@ -34,6 +42,12 @@ pub struct MessageAndUser {
     pub message: Message,
     #[sqlx(flatten)]
     pub user: User,
+}
+
+impl MessageAndUser {
+    pub fn set_formatted_timestamp(&mut self) {
+        self.message.set_formatted_timestamp();
+    }
 }
 
 #[derive(FromRow)]

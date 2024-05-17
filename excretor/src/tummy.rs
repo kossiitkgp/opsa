@@ -15,12 +15,19 @@ pub struct Tummy {
     tummy_conn_pool: PgPool,
 }
 
-pub fn get_formatted_timestamp(timestamp: &NaiveDateTime) -> String {
-    timestamp.format("%d %b %Y @ %I:%M %p").to_string()
+pub(crate) trait SlackDateTime {
+    fn human_format(&self) -> String;
+    fn from_slack_ts(str: &str) -> Self;
 }
-pub fn str_to_datetime(ts_string: &String) -> NaiveDateTime {
-    // TODO: Stop unwrapping once axum error handling is oxidized
-    chrono::NaiveDateTime::parse_from_str(ts_string, "%Y-%m-%d %X%.f").unwrap()
+
+impl SlackDateTime for NaiveDateTime {
+    fn human_format(&self) -> String {
+        self.format("%d %b %Y @ %I:%M %p").to_string()
+    }
+
+    fn from_slack_ts(str: &str) -> Self {
+        Self::parse_from_str(str, "%Y-%m-%d %X%.f").unwrap()
+    }
 }
 
 impl Tummy {
@@ -79,7 +86,7 @@ impl Tummy {
         }?;
 
         fetched_messages.iter_mut().for_each(|msg| {
-            msg.message.formatted_timestamp = get_formatted_timestamp(&msg.message.timestamp);
+            msg.set_formatted_timestamp();
 
             if msg.user.image_url.is_empty() {
                 msg.user.image_url = "/assets/avatar.png".into();

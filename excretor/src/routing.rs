@@ -20,7 +20,8 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
 
 mod handlers {
     use super::RouterState;
-    use crate::{templates, tummy};
+    use crate::templates;
+    use crate::tummy::SlackDateTime;
     use askama::Template;
     use axum::extract::{Path, Query, State};
     use axum::response::IntoResponse;
@@ -99,7 +100,7 @@ mod handlers {
                 &pagination
                     .last_msg_timestamp
                     .as_ref()
-                    .map(tummy::str_to_datetime),
+                    .map(|ts| chrono::NaiveDateTime::from_slack_ts(ts)),
                 &pagination.per_page,
             )
             .await
