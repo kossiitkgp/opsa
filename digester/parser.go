@@ -204,7 +204,7 @@ func parseUser(element Element) string {
 	if result == "@" {
 		result += "unknown-user"
 	}
-	return "<div class=\"user-mention\">" + result + "</div>"
+	return "<span class=\"user-mention\">" + result + "</span>"
 }
 
 func parseChannel(element Element) string {
@@ -212,7 +212,7 @@ func parseChannel(element Element) string {
 	if result == "#" {
 		result += "unknown-channel"
 	}
-	return "<div class=\"channel-mention\">" + result + "</div>"
+	return "<span class=\"channel-mention\">" + result + "</span>"
 }
 
 func parseBroadcast(element Element) string {
@@ -220,7 +220,15 @@ func parseBroadcast(element Element) string {
 	if result == "@" {
 		result += "unknown-broadcast"
 	}
-	return "<div class=\"broadcast-mention\">" + result + "</div>"
+	return "<span class=\"broadcast-mention\">" + result + "</span>"
+}
+
+func parseLink(element Element) string {
+	if element.Text == "" {
+		element.Text = element.URL
+	}
+
+	return "[" + element.Text + "](" + element.URL + ")"
 }
 
 func parseElement(element Element) string {
@@ -240,7 +248,7 @@ func parseElement(element Element) string {
 	case "color":
 		result = element.ColorValue
 	case "link":
-		result = "[" + element.Text + "](" + element.URL + ")"
+		result = parseLink(element)
 	case "rich_text_section":
 		for _, subElement := range element.Elements {
 			result += parseElement(subElement)
