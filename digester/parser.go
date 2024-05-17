@@ -21,6 +21,8 @@ type Element struct {
 	Border    int       `json:"border"`
 	EmojiName string    `json:"name"`
 	URL       string    `json:"url"`
+	UserID    string    `json:"user_id"`
+	ChannelID string    `json:"channel_id"`
 }
 
 type Style struct {
@@ -189,6 +191,19 @@ func parsePreformatted(element Element) string {
 	return result
 }
 
+func parseUser(element Element) string {
+	result := "@"
+
+	for _, user := range users {
+		if user.ID == element.UserID {
+			result += user.Name
+			return result
+		}
+	}
+
+	return result + "unknown-user"
+}
+
 func parseElement(element Element) string {
 	result := ""
 
@@ -197,6 +212,10 @@ func parseElement(element Element) string {
 		result = parseText(element)
 	case "emoji":
 		result = ":" + element.EmojiName + ":"
+	case "user":
+		result = parseUser(element)
+	case "channel":
+		result = "#" + element.ChannelID
 	case "link":
 		result = "[" + element.Text + "](" + element.URL + ")"
 	case "rich_text_section":
