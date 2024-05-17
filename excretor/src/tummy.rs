@@ -17,7 +17,7 @@ pub struct Tummy {
 
 pub(crate) trait SlackDateTime {
     fn human_format(&self) -> String;
-    fn from_slack_ts(str: &str) -> Self;
+    fn from_pg_ts(str: &str) -> Self;
 }
 
 impl SlackDateTime for NaiveDateTime {
@@ -25,7 +25,7 @@ impl SlackDateTime for NaiveDateTime {
         self.format("%d %b %Y @ %I:%M %p").to_string()
     }
 
-    fn from_slack_ts(str: &str) -> Self {
+    fn from_pg_ts(str: &str) -> Self {
         Self::parse_from_str(str, "%Y-%m-%d %X%.f").unwrap()
     }
 }

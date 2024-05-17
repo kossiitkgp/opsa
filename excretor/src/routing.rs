@@ -100,7 +100,7 @@ mod handlers {
                 &pagination
                     .last_msg_timestamp
                     .as_ref()
-                    .map(|ts| chrono::NaiveDateTime::from_slack_ts(ts)),
+                    .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts)),
                 &pagination.per_page,
             )
             .await
