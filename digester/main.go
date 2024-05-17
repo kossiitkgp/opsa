@@ -29,6 +29,7 @@ type User struct {
 }
 
 type Channel struct {
+	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Topic struct {
 		Value string `json:"value"`

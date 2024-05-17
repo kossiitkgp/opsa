@@ -208,9 +208,18 @@ func parseUser(element Element) string {
 }
 
 func parseChannel(element Element) string {
-	result := "#" + element.ChannelID
+	result := "#"
+	for _, channel := range channels {
+		if channel.ID == element.ChannelID {
+			result += channel.Name
+		}
+	}
 	if result == "#" {
-		result += "unknown-channel"
+		if element.ChannelID == "" {
+			result += "unknown-channel"
+		} else {
+			result += element.ChannelID
+		}
 	}
 	return "<span class=\"channel-mention\">" + result + "</span>"
 }
