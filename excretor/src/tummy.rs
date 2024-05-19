@@ -55,7 +55,7 @@ impl Tummy {
 
     pub async fn fetch_msg_page(
         &self,
-        channel_name: &str,
+        channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
@@ -64,10 +64,10 @@ impl Tummy {
                 "SELECT messages.*, users.*
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_name = $1 AND ts < $2
+                WHERE channel_id = $1 AND ts < $2
                 ORDER BY ts DESC LIMIT $3",
             )
-            .bind(channel_name)
+            .bind(channel_id)
             .bind(timestamp)
             .bind(i64::from(*msgs_per_page))
             .fetch_all(&self.tummy_conn_pool)
@@ -77,10 +77,10 @@ impl Tummy {
                 "SELECT messages.*, users.*
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_name = $1
+                WHERE channel_id = $1
                 ORDER BY ts DESC LIMIT $2",
             )
-            .bind(channel_name)
+            .bind(channel_id)
             .bind(i64::from(*msgs_per_page))
             .fetch_all(&self.tummy_conn_pool)
             .await

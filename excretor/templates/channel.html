@@ -7,7 +7,7 @@
     </div>
     <div class="message-container">
         <div
-            hx-get="/messages/{{ channel.name }}?per_page=10"
+            hx-get="/messages/{{ channel.id }}?per_page=10"
             hx-target="this"
             hx-swap="outerHTML"
             hx-trigger="load"
