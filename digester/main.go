@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/k0kubun/go-ansi"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -66,6 +68,17 @@ var (
 	messageSet = make(map[string]bool)
 )
 
+func initLogger() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = zerolog.New(
+		zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			TimeFormat: time.DateTime,
+		},
+	).With().Timestamp().Logger()
+}
+
 func connectDB() *sql.DB {
 	host := os.Getenv("TUMMY_HOST")
 	if host == "" {
@@ -83,14 +96,14 @@ func connectDB() *sql.DB {
 
 	err = db.Ping()
 	CheckError(err)
-	log.Println("Digester is now successfully connected to the tummy!")
+	log.Info().Msg("Digester is now successfully connected to the tummy!")
 
 	return db
 }
 
 func CheckError(err error) {
 	if err != nil {
-		panic(err)
+		log.Panic().Err(err).Msg("A fatal error occurred. Exiting...")
 	}
 }
 
@@ -187,7 +200,7 @@ func queryExistingContent() {
 		messageSet[message.ChannelID+message.UserID+message.Timestamp] = true
 	}
 
-	log.Println("Digester found " + fmt.Sprint(len(userSet)) + " users, " + fmt.Sprint(len(channelSet)) + " channels and " + fmt.Sprint(len(messageSet)) + " messages already in the tummy.")
+	log.Info().Msg("Digester found " + fmt.Sprint(len(userSet)) + " users, " + fmt.Sprint(len(channelSet)) + " channels and " + fmt.Sprint(len(messageSet)) + " messages already in the tummy.")
 }
 
 func getProgressBar(limit int, description string) *progressbar.ProgressBar {
@@ -213,6 +226,8 @@ func getProgressBar(limit int, description string) *progressbar.ProgressBar {
 }
 
 func main() {
+	initLogger()
+
 	db = connectDB()
 	defer db.Close()
 
@@ -222,16 +237,16 @@ func main() {
 	CheckError(err)
 
 	if existingMessagesCount > 0 {
-		log.Printf("Digester %d found messages in tummy. Querying existing content...", existingMessagesCount)
+		log.Info().Msg("Tummy is not empty. Querying existing content...")
 		queryExistingContent()
 	} else {
-		log.Println("Digester found an empty tummy. Starting to digest the Slack export...")
+		log.Info().Msg("Digester found an empty tummy. Starting to digest the Slack export...")
 	}
 
 	zipfilePath := os.Getenv("ZIPFILE_PATH")
 	err = unzipSource(zipfilePath, EXTRACTION_DIR)
 	CheckError(err)
-	log.Println("Slack export has been successfully extracted!")
+	log.Info().Msg("Slack export has been successfully extracted!")
 
 	usersFile, err := os.ReadFile(USERS_FILEPATH)
 	CheckError(err)
@@ -252,7 +267,7 @@ func main() {
 		slackbot.Profile.DisplayName = "Slackbot"
 		slackbot.Profile.RealName = "Slackbot"
 		users = append(users, slackbot)
-		log.Println("Slackbot not found in tummy. Adding it to the users list.")
+		log.Info().Msg("Slackbot not found in tummy. Adding it to the users list.")
 	}
 
 	newUsersCount := 0
@@ -275,14 +290,14 @@ func main() {
 		userSet[user.ID] = user.Name
 	}
 	if newUsersCount > 0 {
-		log.Println("Digester digested " + fmt.Sprint(newUsersCount) + " new users and sent to the tummy.")
+		log.Info().Msg("Digester digested " + fmt.Sprint(newUsersCount) + " new users and sent to the tummy.")
 	} else {
-		log.Println("Digester found no new users.")
+		log.Info().Msg("Digester found no new users.")
 	}
 	if oldUsersUpdatedCount > 0 {
-		log.Println("Digester re-digested " + fmt.Sprint(oldUsersUpdatedCount) + " existing users in the tummy.")
+		log.Info().Msg("Digester re-digested " + fmt.Sprint(oldUsersUpdatedCount) + " existing users in the tummy.")
 	} else {
-		log.Println("Digester found no need to re-digest any existing user.")
+		log.Info().Msg("Digester found no need to re-digest any existing user.")
 	}
 
 	channelsFile, err := os.ReadFile(CHANNELS_FILEPATH)
@@ -312,14 +327,14 @@ func main() {
 		channelSet[channel.ID] = channel.Name
 	}
 	if newChannelsCount > 0 {
-		log.Println("Digester digested " + fmt.Sprint(newChannelsCount) + " new channels and sent to the tummy.")
+		log.Info().Msg("Digester digested " + fmt.Sprint(newChannelsCount) + " new channels and sent to the tummy.")
 	} else {
-		log.Println("Digester found no new channels.")
+		log.Info().Msg("Digester found no new channels.")
 	}
 	if existingChannelsUpdatedCount > 0 {
-		log.Println("Digester re-digested " + fmt.Sprint(existingChannelsUpdatedCount) + " existing channels in the tummy.")
+		log.Info().Msg("Digester re-digested " + fmt.Sprint(existingChannelsUpdatedCount) + " existing channels in the tummy.")
 	} else {
-		log.Println("Digester found no need to re-digest any existing channel.")
+		log.Info().Msg("Digester found no need to re-digest any existing channel.")
 	}
 
 	var messages []Message
@@ -378,7 +393,7 @@ func main() {
 			}
 		}
 	}
-	log.Println("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and sent to tummy as users.")
+	log.Info().Msg("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and sent to tummy as users.")
 
 	newMessagesCount := 0
 	bar = getProgressBar(len(messages), "[cyan][4/4][reset] Digesting messages...               ")
@@ -397,5 +412,5 @@ func main() {
 		CheckError(err)
 		newMessagesCount++
 	}
-	log.Println("Digester digested " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
+	log.Info().Msg("Digester digested " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
 }
