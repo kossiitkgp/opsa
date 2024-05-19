@@ -1,5 +1,7 @@
 use sqlx::{prelude::FromRow, types::chrono};
 
+use crate::tummy::SlackDateTime;
+
 #[derive(FromRow)]
 pub struct Message {
     pub channel_name: String,
@@ -16,6 +18,12 @@ pub struct Message {
     pub formatted_timestamp: String,
 }
 
+impl Message {
+    pub fn set_formatted_timestamp(&mut self) {
+        self.formatted_timestamp = self.timestamp.human_format();
+    }
+}
+
 #[derive(FromRow)]
 pub struct User {
     pub id: String,
@@ -28,12 +36,30 @@ pub struct User {
     pub is_bot: bool,
 }
 
+impl User {
+    pub fn set_default_image_url(&mut self) {
+        if self.image_url.is_empty() {
+            self.image_url = "/assets/avatar.png".into();
+        }
+    }
+}
+
 #[derive(FromRow)]
 pub struct MessageAndUser {
     #[sqlx(flatten)]
     pub message: Message,
     #[sqlx(flatten)]
     pub user: User,
+}
+
+impl MessageAndUser {
+    pub fn set_formatted_timestamp(&mut self) {
+        self.message.set_formatted_timestamp();
+    }
+
+    pub fn set_default_image_url(&mut self) {
+        self.user.set_default_image_url();
+    }
 }
 
 #[derive(FromRow)]

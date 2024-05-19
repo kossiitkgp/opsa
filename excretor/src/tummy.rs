@@ -15,8 +15,19 @@ pub struct Tummy {
     tummy_conn_pool: PgPool,
 }
 
-pub fn get_formatted_timestamp(timestamp: &NaiveDateTime) -> String {
-    timestamp.format("%d %b %Y @ %I:%M %p").to_string()
+pub(crate) trait SlackDateTime {
+    fn human_format(&self) -> String;
+    fn from_pg_ts(str: &str) -> Self;
+}
+
+impl SlackDateTime for NaiveDateTime {
+    fn human_format(&self) -> String {
+        self.format("%d %b %Y @ %I:%M %p").to_string()
+    }
+
+    fn from_pg_ts(str: &str) -> Self {
+        Self::parse_from_str(str, "%Y-%m-%d %X%.f").unwrap()
+    }
 }
 
 impl Tummy {
@@ -41,13 +52,13 @@ impl Tummy {
     }
 
     pub async fn get_all_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
-        sqlx::query_as::<_, Channel>("select * from channels")
+        sqlx::query_as::<_, Channel>(queries::GET_ALL_CHANNELS)
             .fetch_all(&self.tummy_conn_pool)
             .await
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
-        sqlx::query_as::<_, Channel>("select * from channels where name = $1")
+        sqlx::query_as::<_, Channel>(queries::GET_CHANNEL_FROM_NAME)
             .bind(channel_name)
             .fetch_one(&self.tummy_conn_pool)
             .await
@@ -60,40 +71,44 @@ impl Tummy {
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
         let mut fetched_messages = if let Some(timestamp) = last_msg_timestamp {
-            sqlx::query_as::<_, MessageAndUser>(
-                "SELECT messages.*, users.*
-                FROM messages
-                INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_name = $1 AND ts < $2
-                ORDER BY ts DESC LIMIT $3",
-            )
-            .bind(channel_name)
-            .bind(timestamp)
-            .bind(i64::from(*msgs_per_page))
-            .fetch_all(&self.tummy_conn_pool)
-            .await
+            sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN_BEFORE_TS)
+                .bind(channel_name)
+                .bind(timestamp)
+                .bind(i64::from(*msgs_per_page))
+                .fetch_all(&self.tummy_conn_pool)
+                .await
         } else {
-            sqlx::query_as::<_, MessageAndUser>(
-                "SELECT messages.*, users.*
-                FROM messages
-                INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_name = $1
-                ORDER BY ts DESC LIMIT $2",
-            )
-            .bind(channel_name)
-            .bind(i64::from(*msgs_per_page))
-            .fetch_all(&self.tummy_conn_pool)
-            .await
+            sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN)
+                .bind(channel_name)
+                .bind(i64::from(*msgs_per_page))
+                .fetch_all(&self.tummy_conn_pool)
+                .await
         }?;
 
         fetched_messages.iter_mut().for_each(|msg| {
-            msg.message.formatted_timestamp = get_formatted_timestamp(&msg.message.timestamp);
-
-            if msg.user.image_url.is_empty() {
-                msg.user.image_url = "/assets/avatar.png".into();
-            }
+            msg.set_formatted_timestamp();
+            msg.set_default_image_url();
         });
 
         Ok(fetched_messages)
     }
+}
+
+mod queries {
+    pub const GET_ALL_CHANNELS: &str = "SELECT * FROM channels";
+    pub const GET_CHANNEL_FROM_NAME: &str = "SELECT * FROM channels WHERE name = $1";
+    pub const GET_MSG_USER_JOIN_BEFORE_TS: &str = "
+		SELECT messages.*, users.*
+		FROM messsages
+		INNER JOIN users ON users.id = messages.user_id
+		WHERE channel_name $1 AND ts < $2
+		ORDER BY ts DESC LIMIT $3
+	";
+    pub const GET_MSG_USER_JOIN: &str = "
+		SELECT messages.*, users.*
+		FROM messages
+		INNER JOIN users ON users.id = messages.user_id
+		WHERE channel_name = $1
+		ORDER BY ts DESC LIMIT $2
+	";
 }
