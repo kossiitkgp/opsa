@@ -69,7 +69,7 @@ ifneq (, $(TUMMY_CONTAINER_ID))
 	@$(MAKEQ) run-digester;
 else
 	@echo "Starting tummy container..."
-	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d;
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d --wait;
 	@$(MAKEQ) run-digester;
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
