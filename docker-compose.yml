@@ -59,25 +59,6 @@ services:
                 aliases:
                     - excretor
 
-    digester:
-        build: "./digester"
-        depends_on:
-            tummy:
-                condition: service_healthy
-        environment:
-            - TUMMY_USERNAME=${TUMMY_USERNAME}
-            - TUMMY_PASSWORD=${TUMMY_PASSWORD}
-            - TUMMY_DB=tummy
-            - TUMMY_PORT=${TUMMY_PORT}
-            - TUMMY_HOST=tummy
-        tty: true
-        volumes:
-            - ${ZIPFILE_PATH}:/slack-export.zip
-        networks:
-            digestive-tract:
-                aliases:
-                    - mouth
-
 networks:
     digestive-tract:
         name: digestive-tract
