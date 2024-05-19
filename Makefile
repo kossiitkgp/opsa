@@ -69,7 +69,7 @@ ifneq (, $(TUMMY_CONTAINER_ID))
 	@$(MAKEQ) run-digester;
 else
 	@echo "Starting tummy container..."
-	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy -d --wait;
+	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait;
 	@$(MAKEQ) run-digester;
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) down;
 endif
@@ -78,8 +78,9 @@ endif
 run-digester:
 	@echo ""
 	@echo "Building and running digester container..."
-	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) up digester --build --abort-on-container-exit;
-	@ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) down digester;
+	@pushd $(PROJECT_DIR)/digester && ZIPFILE_PATH=$(PROJECT_DIR)/$(FILE) $(EXCRETOR_DEV_ENVS) go run main.go;
+	# @ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) up digester --build --abort-on-container-exit;
+	# @ZIPFILE_PATH=$(FILE) $(DOCKER_COMPOSE) down digester;
 
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."

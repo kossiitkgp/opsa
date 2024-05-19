@@ -12,7 +12,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/k0kubun/go-ansi"
 	_ "github.com/lib/pq"
+	"github.com/schollz/progressbar/v3"
 )
 
 type User struct {
@@ -51,8 +53,7 @@ type Message struct {
 }
 
 const (
-	ZIPFILE_PATH      = "/slack-export.zip"
-	EXTRACTION_DIR    = "/extracted"
+	EXTRACTION_DIR    = "/tmp/digester-extract"
 	USERS_FILEPATH    = EXTRACTION_DIR + "/users.json"
 	CHANNELS_FILEPATH = EXTRACTION_DIR + "/channels.json"
 	SLACKBOT_ID       = "USLACKBOT"
@@ -64,6 +65,28 @@ var (
 	channelSet = make(map[string]string)
 	messageSet = make(map[string]bool)
 )
+
+func connectDB() *sql.DB {
+	host := os.Getenv("TUMMY_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port, err := strconv.Atoi(os.Getenv("TUMMY_PORT"))
+	CheckError(err)
+	user := os.Getenv("TUMMY_USERNAME")
+	password := os.Getenv("TUMMY_PASSWORD")
+	dbname := os.Getenv("TUMMY_DB")
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", psqlconn)
+	CheckError(err)
+
+	err = db.Ping()
+	CheckError(err)
+	log.Println("Digester is now successfully connected to the tummy!")
+
+	return db
+}
 
 func CheckError(err error) {
 	if err != nil {
@@ -167,27 +190,35 @@ func queryExistingContent() {
 	log.Println("Digester found " + fmt.Sprint(len(userSet)) + " users, " + fmt.Sprint(len(channelSet)) + " channels and " + fmt.Sprint(len(messageSet)) + " messages already in the tummy.")
 }
 
+func getProgressBar(limit int, description string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(limit,
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowElapsedTimeOnFinish(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSetWidth(30),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetDescription(description),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Printf("\n")
+		}))
+}
+
 func main() {
-	host := os.Getenv("TUMMY_HOST")
-	port, err := strconv.Atoi(os.Getenv("TUMMY_PORT"))
-	CheckError(err)
-	user := os.Getenv("TUMMY_USERNAME")
-	password := os.Getenv("TUMMY_PASSWORD")
-	dbname := os.Getenv("TUMMY_DB")
-
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-
-	db, err = sql.Open("postgres", psqlconn)
-	CheckError(err)
+	db = connectDB()
 	defer db.Close()
-
-	err = db.Ping()
-	CheckError(err)
-	log.Println("Digester is now successfully connected to the tummy!")
 
 	row := db.QueryRow("SELECT COUNT(*) FROM messages;")
 	existingMessagesCount := 0
-	err = row.Scan(&existingMessagesCount)
+	err := row.Scan(&existingMessagesCount)
 	CheckError(err)
 
 	if existingMessagesCount > 0 {
@@ -197,7 +228,8 @@ func main() {
 		log.Println("Digester found an empty tummy. Starting to digest the Slack export...")
 	}
 
-	err = unzipSource(ZIPFILE_PATH, EXTRACTION_DIR)
+	zipfilePath := os.Getenv("ZIPFILE_PATH")
+	err = unzipSource(zipfilePath, EXTRACTION_DIR)
 	CheckError(err)
 	log.Println("Slack export has been successfully extracted!")
 
@@ -225,7 +257,9 @@ func main() {
 
 	newUsersCount := 0
 	oldUsersUpdatedCount := 0
+	bar := getProgressBar(len(users), "[cyan][1/4][reset] Extracting and digesting users...   ")
 	for _, user := range users {
+		bar.Add(1)
 		_, userExists := userSet[user.ID]
 		if userExists {
 			query := "UPDATE users SET name = $1, real_name = $2, display_name = $3, email = $4, deleted = $5, is_bot = $6, image_url = $7 WHERE id = $8;"
@@ -258,9 +292,11 @@ func main() {
 	err = json.Unmarshal(channelsFile, &channels)
 	CheckError(err)
 
+	bar = getProgressBar(len(channels), "[cyan][2/4][reset] Extracting and digesting channels...")
 	newChannelsCount := 0
 	existingChannelsUpdatedCount := 0
 	for _, channel := range channels {
+		bar.Add(1)
 		_, channelExists := channelSet[channel.ID]
 		if channelExists {
 			query := "UPDATE channels SET name = $1, topic = $2, purpose = $3 WHERE id = $4;"
@@ -286,9 +322,11 @@ func main() {
 		log.Println("Digester found no need to re-digest any existing channel.")
 	}
 
+	var messages []Message
 	newBotsCount := 0
-	newMessagesCount := 0
+	bar = getProgressBar(len(channels), "[cyan][3/4][reset] Extracting messages...              ")
 	for _, channel := range channels {
+		bar.Add(1)
 		messagesDirPath := filepath.Join(EXTRACTION_DIR, channel.Name)
 		messageFiles, err := os.ReadDir(messagesDirPath)
 		CheckError(err)
@@ -302,11 +340,11 @@ func main() {
 			messagesFile, err := os.ReadFile(messageFilePath)
 			CheckError(err)
 
-			var messages []Message
-			err = json.Unmarshal(messagesFile, &messages)
+			var messagesOfChannel []Message
+			err = json.Unmarshal(messagesFile, &messagesOfChannel)
 			CheckError(err)
 
-			for _, message := range messages {
+			for _, message := range messagesOfChannel {
 				message.ChannelID = channel.ID
 				if message.UserID == "" {
 					if message.BotID == "" {
@@ -336,21 +374,28 @@ func main() {
 					}
 				}
 
-				if messageSet[message.ChannelID+message.UserID+message.Timestamp] {
-					continue
-				}
-
-				if message.ThreadTimestamp != "" {
-					query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
-					_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
-				} else {
-					query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
-					_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
-				}
-				CheckError(err)
-				newMessagesCount++
+				messages = append(messages, message)
 			}
 		}
 	}
-	log.Println("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
+	log.Println("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and sent to tummy as users.")
+
+	newMessagesCount := 0
+	bar = getProgressBar(len(messages), "[cyan][4/4][reset] Digesting messages...               ")
+	for _, message := range messages {
+		bar.Add(1)
+		if messageSet[message.ChannelID+message.UserID+message.Timestamp] {
+			continue
+		}
+		if message.ThreadTimestamp != "" {
+			query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
+			_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
+		} else {
+			query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
+			_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
+		}
+		CheckError(err)
+		newMessagesCount++
+	}
+	log.Println("Digester digested " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
 }
