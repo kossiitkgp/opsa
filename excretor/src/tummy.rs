@@ -87,10 +87,7 @@ impl Tummy {
 
         fetched_messages.iter_mut().for_each(|msg| {
             msg.set_formatted_timestamp();
-
-            if msg.user.image_url.is_empty() {
-                msg.user.image_url = "/assets/avatar.png".into();
-            }
+            msg.set_default_image_url();
         });
 
         Ok(fetched_messages)

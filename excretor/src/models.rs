@@ -36,6 +36,14 @@ pub struct User {
     pub is_bot: bool,
 }
 
+impl User {
+    pub fn set_default_image_url(&mut self) {
+        if self.image_url.is_empty() {
+            self.image_url = "/assets/avatar.png".into();
+        }
+    }
+}
+
 #[derive(FromRow)]
 pub struct MessageAndUser {
     #[sqlx(flatten)]
@@ -47,6 +55,10 @@ pub struct MessageAndUser {
 impl MessageAndUser {
     pub fn set_formatted_timestamp(&mut self) {
         self.message.set_formatted_timestamp();
+    }
+
+    pub fn set_default_image_url(&mut self) {
+        self.user.set_default_image_url();
     }
 }
 
