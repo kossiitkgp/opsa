@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/enescakir/emoji"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
@@ -247,7 +248,7 @@ func parseElement(element Element) string {
 	case "text":
 		result = parseText(element)
 	case "emoji":
-		result = ":" + element.EmojiName + ":"
+		result = emoji.Parse(":" + element.EmojiName + ":")
 	case "user":
 		result = parseUser(element)
 	case "channel":
