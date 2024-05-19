@@ -33,6 +33,11 @@ services:
         volumes:
             - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
             - food:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "postgres"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
         ports:
             - "${TUMMY_PORT}:${TUMMY_PORT}"
         networks:
