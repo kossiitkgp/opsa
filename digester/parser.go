@@ -63,6 +63,30 @@ func (s *Style) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unknown style type")
 }
 
+func addBorder(text string, border int) string {
+	result := ""
+
+	for i := 0; i < border; i++ {
+		result += ">"
+	}
+
+	if border != 0 {
+		result += " "
+	}
+
+	return result + text
+}
+
+func addIndent(text string, indent int) string {
+	result := ""
+
+	for i := 0; i < indent; i++ {
+		result += "   "
+	}
+
+	return result + text
+}
+
 func parseText(element Element) string {
 	result := ""
 
@@ -114,30 +138,6 @@ func parseText(element Element) string {
 	}
 
 	return strings.Repeat(" ", leadingSpacesCount) + result + strings.Repeat(" ", trailingSpacesCount)
-}
-
-func addBorder(text string, border int) string {
-	result := ""
-
-	for i := 0; i < border; i++ {
-		result += ">"
-	}
-
-	if border != 0 {
-		result += " "
-	}
-
-	return result + text
-}
-
-func addIndent(text string, indent int) string {
-	result := ""
-
-	for i := 0; i < indent; i++ {
-		result += "   "
-	}
-
-	return result + text
 }
 
 func parseList(element Element) string {
@@ -226,6 +226,24 @@ func parseLink(element Element) string {
 	return "[" + element.Text + "](" + element.URL + ")"
 }
 
+func parseSection(element Element) string {
+	result := ""
+
+	for _, subElement := range element.Elements {
+		result += parseElement(subElement)
+	}
+
+	return result
+}
+
+func parseEmoji(element Element) string {
+	return emoji.Parse(":" + element.EmojiName + ":")
+}
+
+func parseColor(element Element) string {
+	return element.ColorValue
+}
+
 func parseElement(element Element) string {
 	result := ""
 
@@ -233,7 +251,7 @@ func parseElement(element Element) string {
 	case "text":
 		result = parseText(element)
 	case "emoji":
-		result = emoji.Parse(":" + element.EmojiName + ":")
+		result = parseEmoji(element)
 	case "user":
 		result = parseUser(element)
 	case "channel":
@@ -241,13 +259,11 @@ func parseElement(element Element) string {
 	case "broadcast":
 		result = parseBroadcast(element)
 	case "color":
-		result = element.ColorValue
+		result = parseColor(element)
 	case "link":
 		result = parseLink(element)
 	case "rich_text_section":
-		for _, subElement := range element.Elements {
-			result += parseElement(subElement)
-		}
+		result = parseSection(element)
 	case "rich_text_list":
 		result += parseList(element)
 	case "rich_text_quote":
