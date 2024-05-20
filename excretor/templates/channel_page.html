@@ -21,7 +21,9 @@
                     {{ message_and_user.message.formatted_timestamp }}
                 </span>
             </div>
-            <p class="message-content">{{ message_and_user.message.text }}</p>
+            <div class="message-content">
+                {{ message_and_user.message.text|safe }}
+            </div>
         </div>
     </div>
     {% endfor %}
