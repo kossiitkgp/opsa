@@ -64,11 +64,7 @@ func (s *Style) UnmarshalJSON(data []byte) error {
 }
 
 func addBorder(text string, border int) string {
-	result := ""
-
-	for i := 0; i < border; i++ {
-		result += ">"
-	}
+	result := strings.Repeat(">", border)
 
 	if border != 0 {
 		result += " "
@@ -78,13 +74,7 @@ func addBorder(text string, border int) string {
 }
 
 func addIndent(text string, indent int) string {
-	result := ""
-
-	for i := 0; i < indent; i++ {
-		result += "   "
-	}
-
-	return result + text
+	return strings.Repeat("   ", indent) + text
 }
 
 func parseText(element Element) string {
