@@ -391,19 +391,20 @@ func main() {
 					}
 				}
 
-				text := ""
-				if message.SubType == "channel_join" {
-					text = "<em>Joined the channel</em>"
-				} else if message.SubType == "channel_archive" {
-					text = "<em>Archived the channel</em>"
-				} else if message.SubType == "channel_leave" {
-					text = "<em>Left the channel</em>"
-				} else if len(message.Blocks) > 0 {
-					text = parseMessage(message.Blocks)
-				}
-
-				if text != "" {
-					message.Text = text
+				switch message.SubType {
+				case "channel_join":
+					message.Text = "<em>Joined the channel</em>"
+				case "channel_archive":
+					message.Text = "<em>Archived the channel</em>"
+				case "channel_leave":
+					message.Text = "<em>Left the channel</em>"
+				default:
+					if len(message.Blocks) > 0 {
+						text := parseMessage(message.Blocks)
+						if text != "" {
+							message.Text = text
+						}
+					}
 				}
 				messages = append(messages, message)
 			}
