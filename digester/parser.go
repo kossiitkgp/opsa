@@ -113,15 +113,7 @@ func parseText(element Element) string {
 		result = "`" + result + "`"
 	}
 
-	for i := 0; i < leadingSpacesCount; i++ {
-		result = " " + result
-	}
-
-	for i := 0; i < trailingSpacesCount; i++ {
-		result = result + " "
-	}
-
-	return result
+	return strings.Repeat(" ", leadingSpacesCount) + result + strings.Repeat(" ", trailingSpacesCount)
 }
 
 func addBorder(text string, border int) string {
