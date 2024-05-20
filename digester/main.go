@@ -45,13 +45,15 @@ type Channel struct {
 
 type Message struct {
 	ChannelID       string
-	UserID          string `json:"user"`
-	BotID           string `json:"bot_id"`
-	BotUsername     string `json:"username"`
-	Timestamp       string `json:"ts"`
-	Text            string `json:"text"`
-	ThreadTimestamp string `json:"thread_ts"`
-	ParentUserID    string `json:"parent_user_id"`
+	UserID          string  `json:"user"`
+	BotID           string  `json:"bot_id"`
+	BotUsername     string  `json:"username"`
+	Timestamp       string  `json:"ts"`
+	Text            string  `json:"text"`
+	ThreadTimestamp string  `json:"thread_ts"`
+	ParentUserID    string  `json:"parent_user_id"`
+	SubType         string  `json:"subtype"`
+	Blocks          []Block `json:"blocks"`
 }
 
 const (
@@ -389,6 +391,20 @@ func main() {
 					}
 				}
 
+				text := ""
+				if message.SubType == "channel_join" {
+					text = "<em>Joined the channel</em>"
+				} else if message.SubType == "channel_archive" {
+					text = "<em>Archived the channel</em>"
+				} else if message.SubType == "channel_leave" {
+					text = "<em>Left the channel</em>"
+				} else if len(message.Blocks) > 0 {
+					text = parseMessage(message.Blocks)
+				}
+
+				if text != "" {
+					message.Text = text
+				}
 				messages = append(messages, message)
 			}
 		}

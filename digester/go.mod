@@ -3,6 +3,8 @@ module github.com/kossiitkgp/top-secret-stuff/digester
 go 1.22.3
 
 require (
+	github.com/enescakir/emoji v1.0.0
+	github.com/gomarkdown/markdown v0.0.0-20240419095408-642f0ee99ae2
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/lib/pq v1.10.9
 	github.com/rs/zerolog v1.32.0
