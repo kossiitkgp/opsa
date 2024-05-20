@@ -9,6 +9,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/rs/zerolog/log"
 )
 
 type Block struct {
@@ -66,12 +67,12 @@ func parseText(element Element) string {
 	result := ""
 
 	if element.Type != "text" {
-		fmt.Println("[WARNING] Element is not text")
+		log.Warn().Msg("Element is not text")
 		return result
 	}
 
 	if element.Style.IsList {
-		fmt.Println("[WARNING] List element tried to be parsed as text")
+		log.Warn().Msg("List element tried to be parsed as text")
 		return result
 	}
 
@@ -151,7 +152,7 @@ func parseList(element Element) string {
 	result := "\n"
 
 	if !element.Style.IsList {
-		fmt.Println("[WARNING] Element is not list")
+		log.Warn().Msg("Element is not list")
 		return result
 	}
 
@@ -262,7 +263,7 @@ func parseElement(element Element) string {
 	case "rich_text_preformatted":
 		result = parsePreformatted(element)
 	default:
-		fmt.Println("Unknown element type: " + element.Type)
+		log.Warn().Msg("Unknown element type: " + element.Type + " (skipping)")
 	}
 
 	return result
@@ -272,7 +273,7 @@ func parseBlock(block Block) string {
 	result := ""
 
 	if block.Type != "rich_text" {
-		fmt.Println("[WARNING] Block is of unknown type: " + block.Type + " (skipping)")
+		log.Warn().Msg("Block is of unknown type: " + block.Type + " (skipping)")
 		return result
 	}
 
