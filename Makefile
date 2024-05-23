@@ -37,6 +37,7 @@ dev:
 
 ## dev-stop: Stop the tummy-dev docker container
 dev-stop:
+	@echo ""
 	@echo "Stopping tummy-dev docker container..."
 	@$(DOCKER_COMPOSE) stop tummy-dev
 	@$(DOCKER_COMPOSE) down tummy-dev
