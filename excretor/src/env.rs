@@ -10,7 +10,7 @@ pub struct EnvVars {
     pub tummy_password: String,
     #[arg(env)]
     pub tummy_port: String,
-    #[arg(env)]
+    #[arg(env, default_value = "postgres://localhost/tummy")]
     pub database_url: String,
     #[arg(env, default_value = "assets/")]
     pub static_assets_dir: PathBuf,

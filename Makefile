@@ -1,6 +1,6 @@
 DATABASE_VOLUME := food
 
-EXCRETOR_DEV_ENVS := $(shell grep -v '^#' .env) RUST_BACKTRACE=1
+EXCRETOR_DEV_ENVS := $(shell grep -v '^\#' .env) RUST_BACKTRACE=1
 
 MAKEQ := $(MAKE) --no-print-directory
 
