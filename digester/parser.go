@@ -9,6 +9,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/rs/zerolog/log"
 )
 
 type Block struct {
@@ -62,16 +63,30 @@ func (s *Style) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unknown style type")
 }
 
+func addBorder(text string, border int) string {
+	result := strings.Repeat(">", border)
+
+	if border != 0 {
+		result += " "
+	}
+
+	return result + text
+}
+
+func addIndent(text string, indent int) string {
+	return strings.Repeat("   ", indent) + text
+}
+
 func parseText(element Element) string {
 	result := ""
 
 	if element.Type != "text" {
-		fmt.Println("[WARNING] Element is not text")
+		log.Warn().Msg("Element is not text")
 		return result
 	}
 
 	if element.Style.IsList {
-		fmt.Println("[WARNING] List element tried to be parsed as text")
+		log.Warn().Msg("List element tried to be parsed as text")
 		return result
 	}
 
@@ -112,46 +127,14 @@ func parseText(element Element) string {
 		result = "`" + result + "`"
 	}
 
-	for i := 0; i < leadingSpacesCount; i++ {
-		result = " " + result
-	}
-
-	for i := 0; i < trailingSpacesCount; i++ {
-		result = result + " "
-	}
-
-	return result
-}
-
-func addBorder(text string, border int) string {
-	result := ""
-
-	for i := 0; i < border; i++ {
-		result += ">"
-	}
-
-	if border != 0 {
-		result += " "
-	}
-
-	return result + text
-}
-
-func addIndent(text string, indent int) string {
-	result := ""
-
-	for i := 0; i < indent; i++ {
-		result += "   "
-	}
-
-	return result + text
+	return strings.Repeat(" ", leadingSpacesCount) + result + strings.Repeat(" ", trailingSpacesCount)
 }
 
 func parseList(element Element) string {
 	result := "\n"
 
 	if !element.Style.IsList {
-		fmt.Println("[WARNING] Element is not list")
+		log.Warn().Msg("Element is not list")
 		return result
 	}
 
@@ -197,12 +180,9 @@ func parsePreformatted(element Element) string {
 
 func parseUser(element Element) string {
 	result := "@"
-	for _, user := range users {
-		if user.ID == element.UserID {
-			result += user.Name
-		}
-	}
-	if result == "@" {
+	if _, userExists := userSet[element.UserID]; userExists {
+		result += userSet[element.UserID]
+	} else {
 		result += "unknown-user"
 	}
 	return "<span class=\"user-mention\">" + result + "</span>"
@@ -210,17 +190,12 @@ func parseUser(element Element) string {
 
 func parseChannel(element Element) string {
 	result := "#"
-	for _, channel := range channels {
-		if channel.ID == element.ChannelID {
-			result += channel.Name
-		}
-	}
-	if result == "#" {
-		if element.ChannelID == "" {
-			result += "unknown-channel"
-		} else {
-			result += element.ChannelID
-		}
+	if element.ChannelID == "" {
+		result += "unknown-channel"
+	} else if _, channelExists := channelSet[element.ChannelID]; channelExists {
+		result += channelSet[element.ChannelID]
+	} else {
+		result += element.ChannelID
 	}
 	return "<span class=\"channel-mention\">" + result + "</span>"
 }
@@ -241,6 +216,24 @@ func parseLink(element Element) string {
 	return "[" + element.Text + "](" + element.URL + ")"
 }
 
+func parseSection(element Element) string {
+	result := ""
+
+	for _, subElement := range element.Elements {
+		result += parseElement(subElement)
+	}
+
+	return result
+}
+
+func parseEmoji(element Element) string {
+	return emoji.Parse(":" + element.EmojiName + ":")
+}
+
+func parseColor(element Element) string {
+	return element.ColorValue
+}
+
 func parseElement(element Element) string {
 	result := ""
 
@@ -248,7 +241,7 @@ func parseElement(element Element) string {
 	case "text":
 		result = parseText(element)
 	case "emoji":
-		result = emoji.Parse(":" + element.EmojiName + ":")
+		result = parseEmoji(element)
 	case "user":
 		result = parseUser(element)
 	case "channel":
@@ -256,13 +249,11 @@ func parseElement(element Element) string {
 	case "broadcast":
 		result = parseBroadcast(element)
 	case "color":
-		result = element.ColorValue
+		result = parseColor(element)
 	case "link":
 		result = parseLink(element)
 	case "rich_text_section":
-		for _, subElement := range element.Elements {
-			result += parseElement(subElement)
-		}
+		result = parseSection(element)
 	case "rich_text_list":
 		result += parseList(element)
 	case "rich_text_quote":
@@ -270,7 +261,7 @@ func parseElement(element Element) string {
 	case "rich_text_preformatted":
 		result = parsePreformatted(element)
 	default:
-		fmt.Println("Unknown element type: " + element.Type)
+		log.Warn().Msg("Unknown element type: " + element.Type + " (skipping)")
 	}
 
 	return result
@@ -280,7 +271,7 @@ func parseBlock(block Block) string {
 	result := ""
 
 	if block.Type != "rich_text" {
-		fmt.Println("[WARNING] Block is of unknown type: " + block.Type + " (skipping)")
+		log.Warn().Msg("Block is of unknown type: " + block.Type + " (skipping)")
 		return result
 	}
 

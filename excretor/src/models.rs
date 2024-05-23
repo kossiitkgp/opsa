@@ -4,7 +4,7 @@ use crate::tummy::SlackDateTime;
 
 #[derive(FromRow)]
 pub struct Message {
-    pub channel_name: String,
+    pub channel_id: String,
     pub user_id: String,
     #[sqlx(rename = "msg_text")]
     pub text: String,
@@ -64,6 +64,7 @@ impl MessageAndUser {
 
 #[derive(FromRow)]
 pub struct Channel {
+    pub id: String,
     pub name: String,
     pub topic: String,
     pub purpose: String,

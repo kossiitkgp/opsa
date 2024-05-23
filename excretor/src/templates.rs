@@ -28,7 +28,7 @@ pub struct ChannelTemplate {
 pub struct ChannelPageTemplate {
     pub messages: Vec<MessageAndUser>,
     pub last_msg_timestamp: String,
-    pub channel_name: String,
+    pub channel_id: String,
 }
 
 #[derive(Template)]

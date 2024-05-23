@@ -66,20 +66,20 @@ impl Tummy {
 
     pub async fn fetch_msg_page(
         &self,
-        channel_name: &str,
+        channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
     ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
         let mut fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN_BEFORE_TS)
-                .bind(channel_name)
+                .bind(channel_id)
                 .bind(timestamp)
                 .bind(i64::from(*msgs_per_page))
                 .fetch_all(&self.tummy_conn_pool)
                 .await
         } else {
             sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN)
-                .bind(channel_name)
+                .bind(channel_id)
                 .bind(i64::from(*msgs_per_page))
                 .fetch_all(&self.tummy_conn_pool)
                 .await
@@ -101,14 +101,14 @@ mod queries {
 		SELECT messages.*, users.*
 		FROM messsages
 		INNER JOIN users ON users.id = messages.user_id
-		WHERE channel_name $1 AND ts < $2
+		WHERE channel_id $1 AND ts < $2
 		ORDER BY ts DESC LIMIT $3
 	";
     pub const GET_MSG_USER_JOIN: &str = "
 		SELECT messages.*, users.*
 		FROM messages
 		INNER JOIN users ON users.id = messages.user_id
-		WHERE channel_name = $1
+		WHERE channel_id = $1
 		ORDER BY ts DESC LIMIT $2
 	";
 }

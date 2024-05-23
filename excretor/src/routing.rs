@@ -11,8 +11,8 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
     Router::new()
         // `GET /` goes to `root`
         .route("/", get(handlers::root))
-        .route("/channels/:channel", get(handlers::load_channel))
-        .route("/messages/:channel", get(handlers::get_messages))
+        .route("/channels/:channel_name", get(handlers::load_channel))
+        .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/assets/*file", get(handlers::assets))
         .with_state(RouterState { tummy, env_vars })
@@ -72,11 +72,11 @@ mod handlers {
 
     pub(super) async fn load_channel(
         State(state): State<RouterState>,
-        Path(channel): Path<String>,
+        Path(channel_name): Path<String>,
     ) -> (StatusCode, Response) {
         match state
             .tummy
-            .get_channel_info(&channel)
+            .get_channel_info(&channel_name)
             .await
             .map_err(internal_error)
         {
@@ -90,13 +90,13 @@ mod handlers {
 
     pub(super) async fn get_messages(
         State(state): State<RouterState>,
-        Path(channel_name): Path<String>,
+        Path(channel_id): Path<String>,
         pagination: Query<Pagination>,
     ) -> (StatusCode, Response) {
         match state
             .tummy
             .fetch_msg_page(
-                &channel_name,
+                &channel_id,
                 &pagination
                     .last_msg_timestamp
                     .as_ref()
@@ -119,7 +119,7 @@ mod handlers {
                         templates::ChannelPageTemplate {
                             messages,
                             last_msg_timestamp: new_last_msg_timestamp.to_string(),
-                            channel_name,
+                            channel_id,
                         }
                         .render()
                         .unwrap(),
