@@ -32,6 +32,7 @@ dev:
 	@ZIPFILE_PATH=. $(DOCKER_COMPOSE) up tummy-dev -d --wait
 	@echo ""
 	@echo "Starting excretor in development mode."
+	@cd excretor && cargo sqlx prepare && cd ..
 	@bash -c "trap 'echo "";$(MAKEQ) dev-stop; exit 0' SIGINT SIGTERM ERR; $(EXCRETOR_DEV_ENVS) cargo watch -C '$(PROJECT_DIR)/excretor/' -c -x run --ignore '*.css';"
 	# In case the excretor gracefully shuts down
 	@popd > /dev/null && $(MAKEQ) dev-stop

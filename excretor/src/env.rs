@@ -10,6 +10,8 @@ pub struct EnvVars {
     pub tummy_password: String,
     #[arg(env)]
     pub tummy_port: String,
+    #[arg(env)]
+    pub database_url: String,
     #[arg(env, default_value = "assets/")]
     pub static_assets_dir: PathBuf,
     #[arg(env, default_value = "tummy")]
@@ -18,6 +20,7 @@ pub struct EnvVars {
     pub tummy_host: String,
     #[arg(env, default_value = "3000")]
     pub excretor_port: String,
+
 }
 
 impl EnvVars {
