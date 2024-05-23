@@ -12,14 +12,14 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn from_db_message(db_message: dbmodels::DBMessage) -> Self {
+    pub fn from_db_message(db_message: &dbmodels::DBMessage) -> Self {
         Message {
-            channel_name: db_message.channel_name,
-            user_id: db_message.user_id,
-            text: db_message.text,
+            channel_name: db_message.channel_name.clone(),
+            user_id: db_message.user_id.clone(),
+            text: db_message.text.clone(),
             timestamp: db_message.timestamp,
             thread_timestamp: db_message.thread_timestamp,
-            parent_user_id: db_message.parent_user_id,
+            parent_user_id: db_message.parent_user_id.clone(),
             formatted_timestamp: db_message.timestamp.human_format(),
         }
     }
@@ -38,16 +38,33 @@ pub struct User {
 }
 
 impl User {
-    pub fn from_db_user(db_user: dbmodels::DBUser) -> Self {
+    pub fn from_db_user(db_user: &dbmodels::DBUser) -> Self {
         User {
-            id: db_user.id,
-            name: db_user.name,
-            real_name: db_user.real_name,
-            display_name: db_user.display_name,
-            image_url: if db_user.image_url.is_empty() { "/assets/avatar.png".into() } else { db_user.image_url },
-            email: db_user.email,
+            id: db_user.id.clone(),
+            name: db_user.name.clone(),
+            real_name: db_user.real_name.clone(),
+            display_name: db_user.display_name.clone(),
+            image_url: if db_user.image_url.is_empty() { "/assets/avatar.png".into() } else { db_user.image_url.clone() },
+            email: db_user.email.clone(),
             deleted: db_user.deleted,
             is_bot: db_user.is_bot,
         }
     }
+}
+
+pub struct Channel {
+    pub name: String,
+    pub topic: String,
+    pub purpose: String,
+}
+
+impl Channel {
+    pub fn from_db_channel(db_channel: &dbmodels::DBChannel) -> Self {
+        Channel {
+            name: db_channel.name.clone(),
+            topic: db_channel.topic.clone(),
+            purpose: db_channel.purpose.clone(),
+        }
+    }
+    
 }

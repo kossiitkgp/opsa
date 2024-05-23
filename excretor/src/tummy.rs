@@ -6,7 +6,7 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser}, env::EnvVars, models::{Message, User}
+    dbmodels::{DBChannel, DBMessageAndUser}, env::EnvVars, models::{self, Channel, Message, User}
 };
 
 #[derive(Clone)]
@@ -50,17 +50,19 @@ impl Tummy {
         }
     }
 
-    pub async fn get_all_channels(&self) -> Result<Vec<DBChannel>, sqlx::Error> {
-        sqlx::query_as::<_, DBChannel>(queries::GET_ALL_CHANNELS)
+    pub async fn get_all_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
+        let db_channels = sqlx::query_as::<_, DBChannel>(queries::GET_ALL_CHANNELS)
             .fetch_all(&self.tummy_conn_pool)
-            .await
+            .await?;
+        Ok(db_channels.iter().map(models::Channel::from_db_channel).collect())
     }
 
-    pub async fn get_channel_info(&self, channel_name: &str) -> Result<DBChannel, sqlx::Error> {
-        sqlx::query_as::<_, DBChannel>(queries::GET_CHANNEL_FROM_NAME)
+    pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
+        let channel = sqlx::query_as::<_, DBChannel>(queries::GET_CHANNEL_FROM_NAME)
             .bind(channel_name)
             .fetch_one(&self.tummy_conn_pool)
-            .await
+            .await?;
+        Ok(models::Channel::from_db_channel(&channel))
     }
 
     pub async fn fetch_msg_page(
@@ -84,15 +86,10 @@ impl Tummy {
                 .await
         }?;
         
-        let mut messages_and_users = Vec::new();
-
-        for message_and_user in fetched_messages {
-            let message = Message::from_db_message(message_and_user.message);
-            let user = User::from_db_user(message_and_user.user);
-
-            messages_and_users.push((message, user));
-        }
-
+        let messages_and_users = fetched_messages
+            .iter()
+            .map(|e| (models::Message::from_db_message(&e.message), models::User::from_db_user(&e.user)))
+            .collect();
         Ok(messages_and_users)
     }
 }
