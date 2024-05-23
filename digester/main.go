@@ -424,4 +424,8 @@ func main() {
 	}
 	log.Info().Msg("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and sent to tummy as users.")
 	log.Info().Msg("Digester digested " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
+
+	err = os.RemoveAll(EXTRACTION_DIR)
+	CheckError(err)
+	log.Info().Msg("Temporary slack extract cleaned.")
 }
