@@ -274,7 +274,7 @@ func main() {
 
 	newUsersCount := 0
 	oldUsersUpdatedCount := 0
-	bar := getProgressBar(len(users), "[cyan][1/4][reset] Extracting and digesting users...   ")
+	bar := getProgressBar(len(users), "[cyan][1/4][reset] Extracting and digesting users...             ")
 	for _, user := range users {
 		bar.Add(1)
 		_, userExists := userSet[user.ID]
@@ -309,7 +309,7 @@ func main() {
 	err = json.Unmarshal(channelsFile, &channels)
 	CheckError(err)
 
-	bar = getProgressBar(len(channels), "[cyan][2/4][reset] Extracting and digesting channels...")
+	bar = getProgressBar(len(channels), "[cyan][2/4][reset] Extracting and digesting channels...          ")
 	newChannelsCount := 0
 	existingChannelsUpdatedCount := 0
 	for _, channel := range channels {
@@ -339,9 +339,9 @@ func main() {
 		log.Info().Msg("Digester found no need to re-digest any existing channel.")
 	}
 
-	var messages []Message
 	newBotsCount := 0
-	bar = getProgressBar(len(channels), "[cyan][3/4][reset] Extracting messages...              ")
+	newMessagesCount := 0
+	bar = getProgressBar(len(channels), "[cyan][3/4][reset] Extracting and digesting messages in chunks...")
 	for _, channel := range channels {
 		bar.Add(1)
 		messagesDirPath := filepath.Join(EXTRACTION_DIR, channel.Name)
@@ -406,28 +406,22 @@ func main() {
 						}
 					}
 				}
-				messages = append(messages, message)
+
+				if messageSet[message.ChannelID+message.UserID+message.Timestamp] {
+					continue
+				}
+				if message.ThreadTimestamp != "" {
+					query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
+					_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
+				} else {
+					query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
+					_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
+				}
+				CheckError(err)
+				newMessagesCount++
 			}
 		}
 	}
 	log.Info().Msg("Digester digested " + fmt.Sprint(newBotsCount) + " new bots and sent to tummy as users.")
-
-	newMessagesCount := 0
-	bar = getProgressBar(len(messages), "[cyan][4/4][reset] Digesting messages...               ")
-	for _, message := range messages {
-		bar.Add(1)
-		if messageSet[message.ChannelID+message.UserID+message.Timestamp] {
-			continue
-		}
-		if message.ThreadTimestamp != "" {
-			query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id, thread_ts) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5, TIMESTAMP 'epoch' + $6 * INTERVAL '1 second');"
-			_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID, message.ThreadTimestamp)
-		} else {
-			query := "INSERT INTO messages (channel_id, user_id, ts, msg_text, parent_user_id) VALUES ($1, $2, TIMESTAMP 'epoch' + $3 * INTERVAL '1 second', $4, $5);"
-			_, err = db.Exec(query, message.ChannelID, message.UserID, message.Timestamp, message.Text, message.ParentUserID)
-		}
-		CheckError(err)
-		newMessagesCount++
-	}
 	log.Info().Msg("Digester digested " + fmt.Sprint(newMessagesCount) + " new messages and sent to the tummy.")
 }
