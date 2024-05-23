@@ -23,6 +23,10 @@ pub struct ChannelTemplate {
     pub channel: Channel,
 }
 
+fn generate_trigger (messages: &[(Message, User)]) -> bool {
+    messages.len() == 10
+}
+
 #[derive(Template)]
 #[template(path = "channel_page.html")]
 pub struct ChannelPageTemplate {
