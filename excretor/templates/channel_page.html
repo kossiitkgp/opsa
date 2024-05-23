@@ -1,13 +1,13 @@
 <!-- templates/channel_page.html -->
 <div id="page-since-{{last_msg_timestamp}}">
-    {% for message_and_user in messages %}
+    {% for (message, user) in messages %}
     <div
         class="message"
-        id="{{ message_and_user.message.timestamp }}{{ message_and_user.message.user_id}}"
+        id="{{ message.timestamp }}{{ message.user_id}}"
     >
         <img
             class="avatar"
-            src="{{ message_and_user.user.image_url }}"
+            src="{{ user.image_url }}"
             alt="User Avatar"
             hx-trigger="error"
             hx-swap="outerHTML"
@@ -16,13 +16,13 @@
         />
         <div class="message-inner-container">
             <div class="user-and-time">
-                <span class="name">{{ message_and_user.user.name }}</span>
+                <span class="name">{{ user.name }}</span>
                 <span class="time">
-                    {{ message_and_user.message.formatted_timestamp }}
+                    {{ message.formatted_timestamp }}
                 </span>
             </div>
             <div class="message-content">
-                {{ message_and_user.message.text|safe }}
+                {{ message.text|safe }}
             </div>
         </div>
     </div>

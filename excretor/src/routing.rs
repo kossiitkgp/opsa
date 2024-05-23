@@ -110,9 +110,8 @@ mod handlers {
             Ok(messages) => {
                 let new_last_msg_timestamp = messages
                     .last()
-                    .map(|msg| msg.message.timestamp)
+                    .map(|(message, _user)| message.timestamp)
                     .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
-
                 (
                     StatusCode::OK,
                     Html(

@@ -6,8 +6,7 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    env::EnvVars,
-    models::{Channel, MessageAndUser},
+    dbmodels::{DBChannel, DBMessageAndUser}, env::EnvVars, models::{Message, User}
 };
 
 #[derive(Clone)]
@@ -51,14 +50,14 @@ impl Tummy {
         }
     }
 
-    pub async fn get_all_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
-        sqlx::query_as::<_, Channel>(queries::GET_ALL_CHANNELS)
+    pub async fn get_all_channels(&self) -> Result<Vec<DBChannel>, sqlx::Error> {
+        sqlx::query_as::<_, DBChannel>(queries::GET_ALL_CHANNELS)
             .fetch_all(&self.tummy_conn_pool)
             .await
     }
 
-    pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
-        sqlx::query_as::<_, Channel>(queries::GET_CHANNEL_FROM_NAME)
+    pub async fn get_channel_info(&self, channel_name: &str) -> Result<DBChannel, sqlx::Error> {
+        sqlx::query_as::<_, DBChannel>(queries::GET_CHANNEL_FROM_NAME)
             .bind(channel_name)
             .fetch_one(&self.tummy_conn_pool)
             .await
@@ -69,28 +68,32 @@ impl Tummy {
         channel_name: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
-    ) -> Result<Vec<MessageAndUser>, sqlx::Error> {
-        let mut fetched_messages = if let Some(timestamp) = last_msg_timestamp {
-            sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN_BEFORE_TS)
+    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+        let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
+            sqlx::query_as::<_, DBMessageAndUser>(queries::GET_MSG_USER_JOIN_BEFORE_TS)
                 .bind(channel_name)
                 .bind(timestamp)
                 .bind(i64::from(*msgs_per_page))
                 .fetch_all(&self.tummy_conn_pool)
                 .await
         } else {
-            sqlx::query_as::<_, MessageAndUser>(queries::GET_MSG_USER_JOIN)
+            sqlx::query_as::<_, DBMessageAndUser>(queries::GET_MSG_USER_JOIN)
                 .bind(channel_name)
                 .bind(i64::from(*msgs_per_page))
                 .fetch_all(&self.tummy_conn_pool)
                 .await
         }?;
+        
+        let mut messages_and_users = Vec::new();
 
-        fetched_messages.iter_mut().for_each(|msg| {
-            msg.set_formatted_timestamp();
-            msg.set_default_image_url();
-        });
+        for message_and_user in fetched_messages {
+            let message = Message::from_db_message(message_and_user.message);
+            let user = User::from_db_user(message_and_user.user);
 
-        Ok(fetched_messages)
+            messages_and_users.push((message, user));
+        }
+
+        Ok(messages_and_users)
     }
 }
 

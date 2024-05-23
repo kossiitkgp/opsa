@@ -1,30 +1,31 @@
-use sqlx::{prelude::FromRow, types::chrono};
+use sqlx::types::chrono;
+use crate::{dbmodels, tummy::SlackDateTime};
 
-use crate::tummy::SlackDateTime;
-
-#[derive(FromRow)]
 pub struct Message {
     pub channel_name: String,
     pub user_id: String,
-    #[sqlx(rename = "msg_text")]
     pub text: String,
-    #[sqlx(rename = "ts")]
     pub timestamp: chrono::NaiveDateTime,
-    #[sqlx(rename = "thread_ts")]
     pub thread_timestamp: Option<chrono::NaiveDateTime>,
-    // If it is a thread, id of the user who sent the parent message
     pub parent_user_id: String,
-    #[sqlx(skip)]
     pub formatted_timestamp: String,
 }
 
 impl Message {
-    pub fn set_formatted_timestamp(&mut self) {
-        self.formatted_timestamp = self.timestamp.human_format();
+    pub fn from_db_message(db_message: dbmodels::DBMessage) -> Self {
+        Message {
+            channel_name: db_message.channel_name,
+            user_id: db_message.user_id,
+            text: db_message.text,
+            timestamp: db_message.timestamp,
+            thread_timestamp: db_message.thread_timestamp,
+            parent_user_id: db_message.parent_user_id,
+            formatted_timestamp: db_message.timestamp.human_format(),
+        }
     }
 }
 
-#[derive(FromRow)]
+
 pub struct User {
     pub id: String,
     pub name: String,
@@ -37,34 +38,16 @@ pub struct User {
 }
 
 impl User {
-    pub fn set_default_image_url(&mut self) {
-        if self.image_url.is_empty() {
-            self.image_url = "/assets/avatar.png".into();
+    pub fn from_db_user(db_user: dbmodels::DBUser) -> Self {
+        User {
+            id: db_user.id,
+            name: db_user.name,
+            real_name: db_user.real_name,
+            display_name: db_user.display_name,
+            image_url: if db_user.image_url.is_empty() { "/assets/avatar.png".into() } else { db_user.image_url },
+            email: db_user.email,
+            deleted: db_user.deleted,
+            is_bot: db_user.is_bot,
         }
     }
-}
-
-#[derive(FromRow)]
-pub struct MessageAndUser {
-    #[sqlx(flatten)]
-    pub message: Message,
-    #[sqlx(flatten)]
-    pub user: User,
-}
-
-impl MessageAndUser {
-    pub fn set_formatted_timestamp(&mut self) {
-        self.message.set_formatted_timestamp();
-    }
-
-    pub fn set_default_image_url(&mut self) {
-        self.user.set_default_image_url();
-    }
-}
-
-#[derive(FromRow)]
-pub struct Channel {
-    pub name: String,
-    pub topic: String,
-    pub purpose: String,
 }

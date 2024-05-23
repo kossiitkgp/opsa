@@ -1,4 +1,5 @@
-use crate::models::{Channel, MessageAndUser};
+use crate::dbmodels::DBChannel;
+use crate::models::{Message, User};
 use askama::Template;
 
 #[derive(Template)]
@@ -8,7 +9,7 @@ pub struct Base;
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
-    pub channels: Vec<Channel>,
+    pub channels: Vec<DBChannel>,
 }
 
 #[derive(Template)]
@@ -20,13 +21,13 @@ pub struct ErrTemplate {
 #[derive(Template)]
 #[template(path = "channel.html")]
 pub struct ChannelTemplate {
-    pub channel: Channel,
+    pub channel: DBChannel,
 }
 
 #[derive(Template)]
 #[template(path = "channel_page.html")]
 pub struct ChannelPageTemplate {
-    pub messages: Vec<MessageAndUser>,
+    pub messages: Vec<(Message, User)>,
     pub last_msg_timestamp: String,
     pub channel_name: String,
 }
