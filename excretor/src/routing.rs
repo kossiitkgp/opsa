@@ -15,6 +15,7 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/assets/*file", get(handlers::assets))
+        .route("/replies", get(handlers::get_replies))
         .with_state(RouterState { tummy, env_vars })
 }
 
@@ -38,6 +39,13 @@ mod handlers {
     pub struct Pagination {
         last_msg_timestamp: Option<String>,
         per_page: u32,
+    }
+
+    #[derive(Deserialize)]
+    pub struct ReplyRequest {
+        pub channel_id: String,
+        pub ts: String,
+        pub user_id: String,
     }
 
     /// Utility function for mapping any error into a `500 Internal Server Error`
@@ -119,6 +127,40 @@ mod handlers {
                             messages,
                             last_msg_timestamp: new_last_msg_timestamp.to_string(),
                             channel_id,
+                        }
+                        .render()
+                        .unwrap(),
+                    )
+                    .into_response(),
+                )
+            }
+        }
+    }
+
+    pub(super) async fn get_replies(
+        State(state): State<RouterState>,
+        message_data: Query<ReplyRequest>,
+    ) -> (StatusCode, Response) {
+        match state
+            .tummy
+            .fetch_replies(
+                &message_data.ts,
+                &message_data.channel_id,
+                &message_data.user_id,
+            )
+            .await
+            .map_err(internal_error)
+        {
+            Err(err) => err,
+            Ok(messages) => {
+                (
+                    StatusCode::OK,
+                    Html(
+                        templates::ThreadTemplate {
+                            messages,
+                            parent_ts: message_data.ts.clone(),
+                            channel_id: message_data.channel_id.clone(),
+                            parent_user_id: message_data.user_id.clone(),
                         }
                         .render()
                         .unwrap(),

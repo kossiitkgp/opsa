@@ -36,5 +36,14 @@ pub struct ChannelPageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "thread.html")]
+pub struct ThreadTemplate {
+    pub messages: Vec<(Message, User)>,
+    pub parent_ts: String,
+    pub channel_id: String,
+    pub parent_user_id: String,
+}
+
+#[derive(Template)]
 #[template(path = "fallback_avatar.html")]
 pub struct FallbackAvatarTemplate;

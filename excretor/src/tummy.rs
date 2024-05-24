@@ -4,7 +4,7 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser},
+    dbmodels::{DBChannel, DBMessageAndUser, DBReply},
     env::EnvVars,
     models::{self, Channel, Message, User},
 };
@@ -72,6 +72,31 @@ impl Tummy {
         Ok(models::Channel::from_db_channel(&channel))
     }
 
+    pub async fn fetch_replies(
+        &self,
+        message_ts: &str,
+        channel_id: &str,
+        user_id: &str,
+    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+        let replies = query_as!(
+            DBReply,
+            r#"
+            SELECT messages.*, users.*
+            FROM messages
+            INNER JOIN users ON users.id = messages.user_id
+            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
+            ORDER BY ts DESC
+            "#,
+            chrono::NaiveDateTime::from_pg_ts(message_ts), channel_id, user_id
+        ).fetch_all(&self.tummy_conn_pool).await?;
+        Ok(replies.iter().map(|e| {
+            (
+                models::Message::from_db_reply(e),
+                models::User::from_db_reply(e),
+            )
+        }).collect())
+    }
+
     pub async fn fetch_msg_page(
         &self,
         channel_id: &str,
@@ -81,10 +106,16 @@ impl Tummy {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             query_as!(DBMessageAndUser, 
                 r#"
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1 AND ts < $2
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = 'C0H8SBPBM'
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND ts < $2 AND messages.parent_user_id = ''
                 ORDER BY ts DESC LIMIT $3
                 "#,
                 channel_id, timestamp, *msgs_per_page as i64
@@ -92,10 +123,16 @@ impl Tummy {
         } else {
             query_as!(DBMessageAndUser, 
                 "
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = 'C0H8SBPBM'
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND messages.parent_user_id = ''
                 ORDER BY ts DESC LIMIT $2
 	            ",
                 channel_id, *msgs_per_page as i64

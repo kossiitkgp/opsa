@@ -199,3 +199,8 @@ body {
     background-color: transparent;
     color: var(--text-primary);
 }
+
+.replies {
+    font-size:14px;
+    color:blue;
+}

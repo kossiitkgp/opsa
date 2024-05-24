@@ -1,1 +1,28 @@
-<!-- templates/thread.html -->
+TODO
+
+<!-- <div class="thread-container" id="replies-for-{{parent_ts}}{{parent_user_id}}{{channel_id}}">
+    {% for (message, user) in messages %}
+    <div class="message" id="{{ message.timestamp }}{{ message.user_id }}">
+        <img
+            class="avatar"
+            src="{{ user.image_url }}"
+            alt="User Avatar"
+            hx-trigger="error"
+            hx-swap="outerHTML"
+            hx-get="/fallback-avatar"
+            hx-target="this"
+        />
+        <div class="message-inner-container">
+            <div class="user-and-time">
+                <span class="name">{{ user.name }}</span>
+                <span class="time">
+                    {{ message.formatted_timestamp }}
+                </span>
+            </div>
+            <div class="message-content">
+                {{ message.text|safe }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div> -->
