@@ -2,7 +2,7 @@ use sqlx::types::chrono;
 use crate::{dbmodels, tummy::SlackDateTime};
 
 pub struct Message {
-    pub channel_name: String,
+    pub channel_id: String,
     pub user_id: String,
     pub text: String,
     pub timestamp: chrono::NaiveDateTime,
@@ -14,7 +14,7 @@ pub struct Message {
 impl Message {
     pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
         Message {
-            channel_name: db_message_and_user.channel_name.clone(),
+            channel_id: db_message_and_user.channel_id.clone(),
             user_id: db_message_and_user.user_id.clone(),
             text: db_message_and_user.msg_text.clone(),
             timestamp: db_message_and_user.ts,
@@ -53,6 +53,7 @@ impl User {
 }
 
 pub struct Channel {
+    pub id: String,
     pub name: String,
     pub topic: String,
     pub purpose: String,
@@ -61,6 +62,7 @@ pub struct Channel {
 impl Channel {
     pub fn from_db_channel(db_channel: &dbmodels::DBChannel) -> Self {
         Channel {
+            id: db_channel.id.clone(),
             name: db_channel.name.clone(),
             topic: db_channel.topic.to_owned().unwrap_or("".into()),
             purpose: db_channel.purpose.to_owned().unwrap_or("".into()),

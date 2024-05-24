@@ -1,85 +1,72 @@
 services:
-  tummy:
-    image: postgres
-    restart: always
-    environment:
-      - POSTGRES_USER=${TUMMY_USERNAME}
-      - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
-      - POSTGRES_DB=tummy
-      - PGPORT=${TUMMY_PORT}
-      - PGHOST=tummy
-    volumes:
-      - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - food:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    networks:
-      digestive-tract:
-        aliases:
-          - tummy
+    tummy:
+        image: postgres
+        restart: always
+        environment:
+            - POSTGRES_USER=${TUMMY_USERNAME}
+            - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
+            - POSTGRES_DB=tummy
+            - PGPORT=${TUMMY_PORT}
+            - PGHOST=tummy
+        volumes:
+            - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
+            - food:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "postgres"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+        networks:
+            digestive-tract:
+                aliases:
+                    - tummy
 
-  tummy-dev:
-    image: postgres
-    restart: always
-    environment:
-      - POSTGRES_USER=${TUMMY_USERNAME}
-      - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
-      - POSTGRES_DB=tummy
-      - PGPORT=${TUMMY_PORT}
-      - PGHOST=localhost
-    volumes:
-      - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - food:/var/lib/postgresql/data
-    ports:
-      - "${TUMMY_PORT}:${TUMMY_PORT}"
-    networks:
-      - digestive-tract
+    tummy-dev:
+        image: postgres
+        restart: always
+        environment:
+            - POSTGRES_USER=${TUMMY_USERNAME}
+            - POSTGRES_PASSWORD=${TUMMY_PASSWORD}
+            - POSTGRES_DB=tummy
+            - PGPORT=${TUMMY_PORT}
+            - PGHOST=localhost
+        volumes:
+            - ./tummy/init.sql:/docker-entrypoint-initdb.d/init.sql
+            - food:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "postgres"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+        ports:
+            - "${TUMMY_PORT}:${TUMMY_PORT}"
+        networks:
+            - digestive-tract
 
-  excretor:
-    build: "./excretor"
-    restart: always
-    depends_on:
-      tummy:
-        condition: service_healthy
-    environment:
-      - EXCRETOR_PORT=${EXCRETOR_PORT}
-      - TUMMY_USERNAME=${TUMMY_USERNAME}
-      - TUMMY_PASSWORD=${TUMMY_PASSWORD}
-      - TUMMY_DB=tummy
-      - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=tummy
-      - STATIC_ASSETS_DIR=${STATIC_ASSETS_DIR}
-    ports:
-      - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
-    networks:
-      digestive-tract:
-        aliases:
-          - excretor
-
-  digester:
-    build: "./digester"
-    depends_on:
-      tummy:
-        condition: service_healthy
-    environment:
-      - TUMMY_USERNAME=${TUMMY_USERNAME}
-      - TUMMY_PASSWORD=${TUMMY_PASSWORD}
-      - TUMMY_DB=tummy
-      - TUMMY_PORT=${TUMMY_PORT}
-      - TUMMY_HOST=tummy
-    volumes:
-      - ${ZIPFILE_PATH}:/slack-export.zip
-    networks:
-      digestive-tract:
-        aliases:
-          - mouth
+    excretor:
+        build: "./excretor"
+        restart: always
+        depends_on:
+            tummy:
+                condition: service_healthy
+        environment:
+            - EXCRETOR_PORT=${EXCRETOR_PORT}
+            - TUMMY_USERNAME=${TUMMY_USERNAME}
+            - TUMMY_PASSWORD=${TUMMY_PASSWORD}
+            - TUMMY_DB=tummy
+            - TUMMY_PORT=${TUMMY_PORT}
+            - TUMMY_HOST=tummy
+            - STATIC_ASSETS_DIR=${STATIC_ASSETS_DIR}
+        ports:
+            - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
+        networks:
+            digestive-tract:
+                aliases:
+                    - excretor
 
 networks:
-  digestive-tract:
-    name: digestive-tract
+    digestive-tract:
+        name: digestive-tract
 
 volumes:
-  food:
+    food:

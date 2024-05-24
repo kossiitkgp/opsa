@@ -32,7 +32,7 @@ fn generate_trigger (messages: &[(Message, User)]) -> bool {
 pub struct ChannelPageTemplate {
     pub messages: Vec<(Message, User)>,
     pub last_msg_timestamp: String,
-    pub channel_name: String,
+    pub channel_id: String,
 }
 
 #[derive(Template)]
