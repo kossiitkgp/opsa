@@ -25,15 +25,15 @@
                 {{ message.text|safe }}
             </div>
             {% if message.thread_count > 0 %}
-            <a
+            <div
                 class="replies"
                 hx-get="/replies?ts={{ message.timestamp }}&user_id={{ message.user_id }}&channel_id={{ channel_id }}"
                 hx-trigger="click"
                 hx-swap="innerHTML"
-                hx-target="#thread-content"
+                hx-target="this"
             >
                 <span>{{ message.thread_count }} replies</span>
-            </a>
+            </div>
             {% endif %}
         </div>
         
