@@ -1,30 +1,31 @@
-use sqlx::{prelude::FromRow, types::chrono};
+use sqlx::types::chrono;
+use crate::{dbmodels, tummy::SlackDateTime};
 
-use crate::tummy::SlackDateTime;
-
-#[derive(FromRow)]
 pub struct Message {
     pub channel_id: String,
     pub user_id: String,
-    #[sqlx(rename = "msg_text")]
     pub text: String,
-    #[sqlx(rename = "ts")]
     pub timestamp: chrono::NaiveDateTime,
-    #[sqlx(rename = "thread_ts")]
     pub thread_timestamp: Option<chrono::NaiveDateTime>,
-    // If it is a thread, id of the user who sent the parent message
-    pub parent_user_id: String,
-    #[sqlx(skip)]
+    pub parent_user_id: Option<String>,
     pub formatted_timestamp: String,
 }
 
 impl Message {
-    pub fn set_formatted_timestamp(&mut self) {
-        self.formatted_timestamp = self.timestamp.human_format();
+    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
+        Message {
+            channel_id: db_message_and_user.channel_id.clone(),
+            user_id: db_message_and_user.user_id.clone(),
+            text: db_message_and_user.msg_text.clone(),
+            timestamp: db_message_and_user.ts,
+            thread_timestamp: db_message_and_user.thread_ts,
+            parent_user_id: db_message_and_user.parent_user_id.clone(),
+            formatted_timestamp: db_message_and_user.ts.human_format(),
+        }
     }
 }
 
-#[derive(FromRow)]
+
 pub struct User {
     pub id: String,
     pub name: String,
@@ -37,35 +38,35 @@ pub struct User {
 }
 
 impl User {
-    pub fn set_default_image_url(&mut self) {
-        if self.image_url.is_empty() {
-            self.image_url = "/assets/avatar.png".into();
+    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
+        User {
+            id: db_message_and_user.id.clone(),
+            name: db_message_and_user.name.clone(),
+            real_name: db_message_and_user.real_name.clone(),
+            display_name: db_message_and_user.display_name.clone(),
+            image_url: if let Some(url) = &db_message_and_user.image_url { url.clone() } else { "/assets/avatar.png".into() },
+            email: db_message_and_user.email.clone(),
+            deleted: db_message_and_user.deleted,
+            is_bot: db_message_and_user.is_bot,
         }
     }
 }
 
-#[derive(FromRow)]
-pub struct MessageAndUser {
-    #[sqlx(flatten)]
-    pub message: Message,
-    #[sqlx(flatten)]
-    pub user: User,
-}
-
-impl MessageAndUser {
-    pub fn set_formatted_timestamp(&mut self) {
-        self.message.set_formatted_timestamp();
-    }
-
-    pub fn set_default_image_url(&mut self) {
-        self.user.set_default_image_url();
-    }
-}
-
-#[derive(FromRow)]
 pub struct Channel {
     pub id: String,
     pub name: String,
     pub topic: String,
     pub purpose: String,
+}
+
+impl Channel {
+    pub fn from_db_channel(db_channel: &dbmodels::DBChannel) -> Self {
+        Channel {
+            id: db_channel.id.clone(),
+            name: db_channel.name.clone(),
+            topic: db_channel.topic.to_owned().unwrap_or("".into()),
+            purpose: db_channel.purpose.to_owned().unwrap_or("".into()),
+        }
+    }
+    
 }
