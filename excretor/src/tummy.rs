@@ -7,7 +7,6 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser},
     env::EnvVars,
     models::{self, Channel, Message, User},
 };

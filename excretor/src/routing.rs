@@ -92,7 +92,7 @@ mod handlers {
         Path(channel_id): Path<String>,
         pagination: Query<Pagination>,
     ) -> Result<(StatusCode, Response), AppError> {
-        match state
+        let messages = state
             .tummy
             .fetch_msg_page(
                 &channel_id,
@@ -102,28 +102,25 @@ mod handlers {
                     .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts)),
                 &pagination.per_page,
             )
-            .await?
-        {
-            Err(err) => err,
-            Ok(messages) => {
-                let new_last_msg_timestamp = messages
-                    .last()
-                    .map(|(message, _user)| message.timestamp)
-                    .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
-                (
-                    StatusCode::OK,
-                    Html(
-                        templates::ChannelPageTemplate {
-                            messages,
-                            last_msg_timestamp: new_last_msg_timestamp.to_string(),
-                            channel_id,
-                        }
-                        .render()?,
-                    )
-                    .into_response(),
-                )
-            }
-        }
+            .await?;
+
+        let new_last_msg_timestamp = messages
+            .last()
+            .map(|(message, _user)| message.timestamp)
+            .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
+
+        Ok((
+            StatusCode::OK,
+            Html(
+                templates::ChannelPageTemplate {
+                    messages,
+                    last_msg_timestamp: new_last_msg_timestamp.to_string(),
+                    channel_id,
+                }
+                .render()?,
+            )
+            .into_response(),
+        ))
     }
 
     pub(super) async fn fallback_avatar() -> Result<(StatusCode, Response), AppError> {
