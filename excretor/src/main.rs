@@ -1,7 +1,7 @@
 use clap::Parser;
 
-mod env;
 mod dbmodels;
+mod env;
 mod models;
 mod routing;
 mod templates;
