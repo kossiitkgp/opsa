@@ -1,10 +1,7 @@
 <!-- templates/channel_page.html -->
 <div id="page-since-{{last_msg_timestamp}}">
     {% for (message, user) in messages %}
-    <div
-        class="message"
-        id="{{ message.timestamp }}{{ message.user_id}}"
-    >
+    <div class="message" id="{{ message.timestamp }}{{ message.user_id}}">
         <img
             class="avatar"
             src="{{ user.image_url }}"
@@ -17,35 +14,28 @@
         <div class="message-inner-container">
             <div class="user-and-time">
                 <span class="name">{{ user.name }}</span>
-                <span class="time">
-                    {{ message.formatted_timestamp }}
-                </span>
+                <span class="time"> {{ message.formatted_timestamp }} </span>
             </div>
-            <div class="message-content">
-                {{ message.text|safe }}
-            </div>
+            <div class="message-content">{{ message.text|safe }}</div>
             {% if message.thread_count > 0 %}
             <div
                 class="replies"
                 hx-get="/replies?ts={{ message.timestamp }}&user_id={{ message.user_id }}&channel_id={{ channel_id }}"
                 hx-trigger="click"
                 hx-swap="innerHTML"
-                hx-target="this"
+                hx-target=".thread-content"
             >
                 <span>{{ message.thread_count }} replies</span>
             </div>
             {% endif %}
         </div>
-        
     </div>
-    {% endfor %}
-
-    {% if self::generate_trigger(messages) %}
-    <div 
-        hx-get="/messages/{{ channel_id }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10" 
-        hx-trigger="intersect once" 
-        hx-swap="beforeend" 
-        hx-target=".message-container" 
-    ></div> 
+    {% endfor %} {% if self::generate_trigger(messages) %}
+    <div
+        hx-get="/messages/{{ channel_id }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10"
+        hx-trigger="intersect once"
+        hx-swap="beforeend"
+        hx-target=".message-container"
+    ></div>
     {% endif %}
 </div>

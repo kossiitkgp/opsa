@@ -1,6 +1,20 @@
-TODO
-
-<!-- <div class="thread-container" id="replies-for-{{parent_ts}}{{parent_user_id}}{{channel_id}}">
+<div
+    class="thread-container"
+    id="replies-for-{{parent_ts}}{{parent_user_id}}{{channel_id}}"
+>
+    <div class="thread-header">
+        <h2>Replies</h2>
+        <!-- hx-get has this empty data url so that i donot have to install hyperscript -->
+        <button
+            class="close"
+            hx-trigger="click"
+            hx-get="data:text/html,"
+            hx-swap="delete"
+            hx-target=".thread-container"
+        >
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
     {% for (message, user) in messages %}
     <div class="message" id="{{ message.timestamp }}{{ message.user_id }}">
         <img
@@ -15,14 +29,10 @@ TODO
         <div class="message-inner-container">
             <div class="user-and-time">
                 <span class="name">{{ user.name }}</span>
-                <span class="time">
-                    {{ message.formatted_timestamp }}
-                </span>
+                <span class="time"> {{ message.formatted_timestamp }} </span>
             </div>
-            <div class="message-content">
-                {{ message.text|safe }}
-            </div>
+            <div class="message-content">{{ message.text|safe }}</div>
         </div>
     </div>
     {% endfor %}
-</div> -->
+</div>
