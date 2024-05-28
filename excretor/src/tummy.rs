@@ -85,7 +85,7 @@ impl Tummy {
             FROM messages
             INNER JOIN users ON users.id = messages.user_id
             WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
-            ORDER BY ts DESC
+            ORDER BY ts ASC
             "#,
             chrono::NaiveDateTime::from_pg_ts(message_ts), channel_id, user_id
         ).fetch_all(&self.tummy_conn_pool).await?;
