@@ -205,6 +205,8 @@ body {
 .replies {
     font-size: 14px;
     color: blue;
+    margin-top: 0.2rem;
+    cursor: pointer;
 }
 
 .thread-container {
