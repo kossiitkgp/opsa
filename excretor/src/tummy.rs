@@ -88,8 +88,8 @@ impl Tummy {
                 SELECT messages.*, users.*
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1 AND ts < $2
-                ORDER BY ts DESC LIMIT $3
+                WHERE channel_id = $1 AND ts > $2
+                ORDER BY ts ASC LIMIT $3
                 "#,
                 channel_id,
                 timestamp,
@@ -105,7 +105,7 @@ impl Tummy {
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
                 WHERE channel_id = $1
-                ORDER BY ts DESC LIMIT $2
+                ORDER BY ts ASC LIMIT $2
 	            ",
                 channel_id,
                 *msgs_per_page as i64
