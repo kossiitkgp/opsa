@@ -15,6 +15,9 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/assets/*file", get(handlers::assets))
+        .route("/auth", get(handlers::auth))
+        .route("/auth/callback", get(handlers::auth_callback))
+        .route("/login", get(handlers::login))
         .with_state(RouterState { tummy, env_vars })
 }
 
@@ -33,6 +36,11 @@ mod handlers {
     use serde::Deserialize;
     use sqlx::types::chrono;
     use tokio_util::io::ReaderStream;
+    use reqwest::Client;
+    use hmac::{Hmac, Mac};
+    use jwt::{SignWithKey, VerifyWithKey};
+    use sha2::Sha256;
+    use std::collections::BTreeMap;
 
     pub(super) struct AppError(color_eyre::eyre::Error);
 
@@ -63,10 +71,60 @@ mod handlers {
         per_page: u32,
     }
 
+    #[derive(Deserialize)]
+    pub struct AuthCallback {
+        code: String,
+    }
+
+    #[derive(Deserialize)]
+    pub struct AuthToken {
+        #[serde(default = "String::new")]
+        token: String,
+    }
+
     // basic handler that responds with a static string
     pub(super) async fn root(
         State(state): State<RouterState>,
+        Query(auth_token): Query<AuthToken>,
     ) -> Result<(StatusCode, Response), AppError> {
+        if auth_token.token.is_empty() {
+            return Ok((
+                StatusCode::FOUND,
+                Response::builder()
+                    .header("Location", "/login")
+                    .body(Body::empty())
+                    .unwrap(),
+            ));
+        }
+
+        let token = auth_token.token.clone();
+        tracing::info!("Token: {}", token);
+        let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
+        let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;
+        let user_id = claims.get("user_id").unwrap();
+        let access_token = claims.get("access_token").unwrap();
+
+        let slack_auth_test_url = "https://slack.com/api/auth.test";
+        let req = Client::new().get(slack_auth_test_url).header("Authorization", format!("Bearer {}", access_token)).build()?;
+        tracing::info!("Request: {:?}", req);
+        let response = Client::new().execute(req).await?;
+        tracing::info!("Response: {:?}", response);
+        
+        if response.status() != StatusCode::OK {
+            return Ok((
+                StatusCode::UNAUTHORIZED,
+                Body::from("Mortals are forbidden from accessing the site").into_response()
+            ));
+        }
+
+        let user = state.tummy.get_user_info(user_id).await?;
+        if user.id.is_empty() || user.is_bot || user.deleted {
+            return Ok((
+                StatusCode::UNAUTHORIZED,
+                Body::from("Mortals are forbidden from accessing the site").into_response()
+            ));
+        }
+
         let channels = state.tummy.get_all_channels().await?;
 
         Ok((
@@ -159,4 +217,83 @@ mod handlers {
             ))
         }
     }
+
+    pub(super) async fn auth(
+        State(state): State<RouterState>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let scopes = "channels:read";
+        let slack_auth_url = format!(
+            "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}",
+            state.env_vars.slack_client_id, scopes, state.env_vars.slack_redirect_uri
+        );
+
+        Ok((
+            StatusCode::FOUND,
+            Response::builder()
+                .header("Location", slack_auth_url)
+                .body(Body::empty())
+                .unwrap(),
+        ))
+    }
+
+    // get request with params
+    pub(super) async fn auth_callback(
+        State(state): State<RouterState>,
+        Query(request): Query<AuthCallback>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let code = request.code;
+        let slack_auth_url = format!(
+            "https://slack.com/api/oauth.v2.access?client_id={}&client_secret={}&code={}&redirect_uri={}",
+            state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, state.env_vars.slack_redirect_uri
+        );
+        // request slack for access token
+        let response = Client::new().get(slack_auth_url).send().await?;
+        
+        if response.status() != StatusCode::OK {
+            return Ok((
+                StatusCode::UNAUTHORIZED, 
+                Body::from("Mortals are forbidden from accessing the site").into_response()
+            ));
+        }
+
+        let body = response.text().await?;
+        let json_body: serde_json::Value = serde_json::from_str(&body)?;
+
+        let access_token = json_body["access_token"].as_str().unwrap();
+
+        let user_id = json_body["authed_user"]["id"].as_str().unwrap();
+        let user = state.tummy.get_user_info(user_id).await?;
+
+        tracing::info!("User {} logged in", user.id);
+        
+        if user.id.is_empty() || user.is_bot || user.deleted {
+            return Ok((
+                StatusCode::UNAUTHORIZED,
+                Body::from("Mortals are forbidden from accessing the site").into_response()
+            ));
+        }
+
+        let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
+        let mut claims = BTreeMap::new();
+        claims.insert("user_id", user_id);
+        claims.insert("access_token", access_token);
+        let token_str = claims.sign_with_key(&key)?;
+
+        Ok((
+            StatusCode::PERMANENT_REDIRECT,
+            Response::builder()
+                .header("Location", "/?token=".to_owned() + &token_str)
+                .body(Body::empty())
+                .unwrap(),
+        ))
+    }
+
+
+    pub(super) async fn login() -> Result<(StatusCode, Response), AppError> {
+        Ok((
+            StatusCode::OK,
+            Html(templates::LoginTemplate.render()?).into_response(),
+        ))
+    }
+
 }

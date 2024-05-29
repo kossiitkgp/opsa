@@ -123,4 +123,18 @@ impl Tummy {
             })
             .collect())
     }
+
+    pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
+        let user = query_as!(
+            DBMessageAndUser,
+            "SELECT * FROM users, messages 
+            WHERE id = $1
+            LIMIT 1
+            ",
+            user_id
+        )
+        .fetch_one(&self.tummy_conn_pool)
+        .await?;
+        Ok(models::User::from_db_message_and_user(&user))
+    }
 }

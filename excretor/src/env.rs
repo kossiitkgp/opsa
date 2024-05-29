@@ -10,6 +10,14 @@ pub struct EnvVars {
     pub tummy_password: String,
     #[arg(env)]
     pub tummy_port: String,
+    #[arg(env)]
+    pub slack_client_id: String,
+    #[arg(env)]
+    pub slack_client_secret: String,
+    #[arg(env)]
+    pub slack_redirect_uri: String,
+    #[arg(env)]
+    pub slack_signing_secret: String,
     #[arg(env, default_value = "postgres://localhost/tummy")]
     pub database_url: String,
     #[arg(env, default_value = "assets/")]
