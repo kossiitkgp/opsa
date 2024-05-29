@@ -98,7 +98,6 @@ mod handlers {
         }
 
         let token = auth_token.token.clone();
-        tracing::info!("Token: {}", token);
         let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
         let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;
         let user_id = claims.get("user_id").unwrap();
@@ -106,9 +105,7 @@ mod handlers {
 
         let slack_auth_test_url = "https://slack.com/api/auth.test";
         let req = Client::new().get(slack_auth_test_url).header("Authorization", format!("Bearer {}", access_token)).build()?;
-        tracing::info!("Request: {:?}", req);
         let response = Client::new().execute(req).await?;
-        tracing::info!("Response: {:?}", response);
         
         if response.status() != StatusCode::OK {
             return Ok((
@@ -263,8 +260,6 @@ mod handlers {
 
         let user_id = json_body["authed_user"]["id"].as_str().unwrap();
         let user = state.tummy.get_user_info(user_id).await?;
-
-        tracing::info!("User {} logged in", user.id);
         
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
