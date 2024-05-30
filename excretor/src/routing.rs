@@ -221,7 +221,8 @@ mod handlers {
         let scopes = "im:read";
         let slack_auth_url = format!(
             "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}",
-            state.env_vars.slack_client_id, scopes, state.env_vars.slack_redirect_uri
+            state.env_vars.slack_client_id, scopes, 
+            reqwest::Url::parse(&state.env_vars.slack_redirect_uri)?.to_string()
         );
 
         Ok((
@@ -241,7 +242,8 @@ mod handlers {
         let code = request.code;
         let slack_auth_url = format!(
             "https://slack.com/api/oauth.v2.access?client_id={}&client_secret={}&code={}&redirect_uri={}",
-            state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, state.env_vars.slack_redirect_uri
+            state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, 
+            reqwest::Url::parse(&state.env_vars.slack_redirect_uri)?.to_string()
         );
         // request slack for access token
         let response = Client::new().get(slack_auth_url).send().await?;
