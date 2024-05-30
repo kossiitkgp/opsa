@@ -7,9 +7,9 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser, DBReply},
+    dbmodels::{DBChannel, DBParentMessage, DBReply},
     env::EnvVars,
-    models::{self, Channel, Message, User},
+    models::{self, Channel, Message},
 };
 
 #[derive(Clone)]
@@ -59,8 +59,8 @@ impl Tummy {
             .await?;
 
         Ok(db_channels
-            .iter()
-            .map(models::Channel::from_db_channel)
+            .into_iter()
+            .map(models::Channel::from)
             .collect())
     }
 
@@ -72,7 +72,7 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::Channel::from_db_channel(&channel))
+        Ok(models::Channel::from(channel))
     }
 
     pub async fn fetch_replies(
@@ -80,7 +80,7 @@ impl Tummy {
         message_ts: &str,
         channel_id: &str,
         user_id: &str,
-    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+    ) -> Result<Vec<Message>, sqlx::Error> {
         let replies = query_as!(
             DBReply,
             r#"
@@ -96,15 +96,9 @@ impl Tummy {
         )
         .fetch_all(&self.tummy_conn_pool)
         .await?;
-        Ok(replies
-            .iter()
-            .map(|e| {
-                (
-                    models::Message::from_db_reply(e),
-                    models::User::from_db_reply(e),
-                )
-            })
-            .collect())
+        Ok(replies.into_iter()
+        .map(models::Message::from)
+        .collect())
     }
 
     pub async fn fetch_msg_page(
@@ -112,10 +106,10 @@ impl Tummy {
         channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
-    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+    ) -> Result<Vec<Message>, sqlx::Error> {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 r#"
                 SELECT messages.*, users.*, c.cnt
                 FROM messages
@@ -137,7 +131,7 @@ impl Tummy {
             .await?
         } else {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 "
                 SELECT messages.*, users.*, c.cnt
                 FROM messages
@@ -158,13 +152,9 @@ impl Tummy {
             .await?
         };
         Ok(fetched_messages
-            .iter()
-            .map(|e| {
-                (
-                    models::Message::from_db_message_and_user(e),
-                    models::User::from_db_message_and_user(e),
-                )
-            })
-            .collect())
+            .into_iter()
+            .map(models::Message::from)
+            .collect()
+        )
     }
 }

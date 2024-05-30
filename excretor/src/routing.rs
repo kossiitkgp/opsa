@@ -116,7 +116,7 @@ mod handlers {
 
         let new_last_msg_timestamp = messages
             .last()
-            .map(|(message, _user)| message.timestamp)
+            .map(|message| message.timestamp)
             .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
 
         Ok((

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct DBMessageAndUser {
+#[derive(Deserialize, Debug)]
+pub struct DBParentMessage {
     pub channel_id: String,
     pub user_id: String,
     pub msg_text: String,
@@ -19,7 +19,7 @@ pub struct DBMessageAndUser {
     pub cnt: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct DBReply {
     pub channel_id: String,
     pub user_id: String,

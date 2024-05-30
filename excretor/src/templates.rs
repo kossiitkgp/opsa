@@ -23,14 +23,14 @@ pub struct ChannelTemplate {
     pub channel: Channel,
 }
 
-fn generate_trigger(messages: &[(Message, User)]) -> bool {
+fn generate_trigger(messages: &[Message]) -> bool {
     messages.len() == 10
 }
 
 #[derive(Template)]
 #[template(path = "channel_page.html")]
 pub struct ChannelPageTemplate {
-    pub messages: Vec<(Message, User)>,
+    pub messages: Vec<Message>,
     pub last_msg_timestamp: String,
     pub channel_id: String,
 }
@@ -38,7 +38,7 @@ pub struct ChannelPageTemplate {
 #[derive(Template)]
 #[template(path = "thread.html")]
 pub struct ThreadTemplate {
-    pub messages: Vec<(Message, User)>,
+    pub messages: Vec<Message>,
     pub parent_ts: String,
     pub channel_id: String,
     pub parent_user_id: String,
