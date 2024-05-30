@@ -58,10 +58,7 @@ impl Tummy {
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
-        Ok(db_channels
-            .into_iter()
-            .map(models::Channel::from)
-            .collect())
+        Ok(db_channels.into_iter().map(models::Channel::from).collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
@@ -96,9 +93,7 @@ impl Tummy {
         )
         .fetch_all(&self.tummy_conn_pool)
         .await?;
-        Ok(replies.into_iter()
-        .map(models::Message::from)
-        .collect())
+        Ok(replies.into_iter().map(models::Message::from).collect())
     }
 
     pub async fn fetch_msg_page(
@@ -154,7 +149,6 @@ impl Tummy {
         Ok(fetched_messages
             .into_iter()
             .map(models::Message::from)
-            .collect()
-        )
+            .collect())
     }
 }

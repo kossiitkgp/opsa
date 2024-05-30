@@ -1,4 +1,7 @@
-use crate::{dbmodels::{DBParentMessage, DBReply, DBChannel}, tummy::SlackDateTime};
+use crate::{
+    dbmodels::{DBChannel, DBParentMessage, DBReply},
+    tummy::SlackDateTime,
+};
 use sqlx::types::chrono;
 
 pub struct Message {
@@ -10,7 +13,7 @@ pub struct Message {
     pub parent_user_id: Option<String>,
     pub formatted_timestamp: String,
     pub thread_count: i64,
-    pub user: User
+    pub user: User,
 }
 
 impl From<DBParentMessage> for Message {
@@ -37,7 +40,7 @@ impl From<DBParentMessage> for Message {
                 email: item.email,
                 deleted: item.deleted,
                 is_bot: item.is_bot,
-            }
+            },
         }
     }
 }
@@ -66,7 +69,7 @@ impl From<DBReply> for Message {
                 email: item.email,
                 deleted: item.deleted,
                 is_bot: item.is_bot,
-            }
+            },
         }
     }
 }
@@ -82,7 +85,6 @@ pub struct User {
     pub is_bot: bool,
 }
 
- 
 pub struct Channel {
     pub id: String,
     pub name: String,

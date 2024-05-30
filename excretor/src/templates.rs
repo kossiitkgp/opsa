@@ -1,4 +1,4 @@
-use crate::models::{Channel, Message, User};
+use crate::models::{Channel, Message};
 use askama::Template;
 
 #[derive(Template)]
