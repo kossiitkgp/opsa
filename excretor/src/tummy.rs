@@ -1,5 +1,8 @@
 use sqlx::{
-    postgres::PgPoolOptions, query_as, types::chrono::{self, NaiveDateTime}, PgPool
+    postgres::PgPoolOptions,
+    query_as,
+    types::chrono::{self, NaiveDateTime},
+    PgPool,
 };
 use std::time::Duration;
 
@@ -50,17 +53,15 @@ impl Tummy {
         }
     }
 
-    pub async fn get_all_channels(&self) -> Result<Vec<Channel>, sqlx::Error> {
-        let db_channels = query_as!(
-            DBChannel,
-            "SELECT * FROM channels"
-        ).fetch_all(&self.tummy_conn_pool).await?;
+    pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
+        let db_channels = query_as!(DBChannel, "SELECT * FROM channels")
+            .fetch_all(&self.tummy_conn_pool)
+            .await?;
 
         Ok(db_channels
             .iter()
             .map(models::Channel::from_db_channel)
-            .collect()
-        )
+            .collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
@@ -68,7 +69,9 @@ impl Tummy {
             DBChannel,
             "SELECT * FROM channels WHERE name = $1",
             channel_name
-        ).fetch_one(&self.tummy_conn_pool).await?;
+        )
+        .fetch_one(&self.tummy_conn_pool)
+        .await?;
         Ok(models::Channel::from_db_channel(&channel))
     }
 
@@ -87,14 +90,21 @@ impl Tummy {
             WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
             ORDER BY ts ASC
             "#,
-            chrono::NaiveDateTime::from_pg_ts(message_ts), channel_id, user_id
-        ).fetch_all(&self.tummy_conn_pool).await?;
-        Ok(replies.iter().map(|e| {
-            (
-                models::Message::from_db_reply(e),
-                models::User::from_db_reply(e),
-            )
-        }).collect())
+            chrono::NaiveDateTime::from_pg_ts(message_ts),
+            channel_id,
+            user_id
+        )
+        .fetch_all(&self.tummy_conn_pool)
+        .await?;
+        Ok(replies
+            .iter()
+            .map(|e| {
+                (
+                    models::Message::from_db_reply(e),
+                    models::User::from_db_reply(e),
+                )
+            })
+            .collect())
     }
 
     pub async fn fetch_msg_page(
@@ -104,7 +114,8 @@ impl Tummy {
         msgs_per_page: &u32,
     ) -> Result<Vec<(Message, User)>, sqlx::Error> {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
-            query_as!(DBMessageAndUser, 
+            query_as!(
+                DBMessageAndUser,
                 r#"
                 SELECT messages.*, users.*, c.cnt
                 FROM messages
@@ -118,10 +129,15 @@ impl Tummy {
                 WHERE channel_id = $1 AND ts < $2 AND messages.parent_user_id = ''
                 ORDER BY ts DESC LIMIT $3
                 "#,
-                channel_id, timestamp, *msgs_per_page as i64
-            ).fetch_all(&self.tummy_conn_pool).await?
+                channel_id,
+                timestamp,
+                *msgs_per_page as i64
+            )
+            .fetch_all(&self.tummy_conn_pool)
+            .await?
         } else {
-            query_as!(DBMessageAndUser, 
+            query_as!(
+                DBMessageAndUser,
                 "
                 SELECT messages.*, users.*, c.cnt
                 FROM messages
@@ -135,14 +151,20 @@ impl Tummy {
                 WHERE channel_id = $1 AND messages.parent_user_id = ''
                 ORDER BY ts DESC LIMIT $2
 	            ",
-                channel_id, *msgs_per_page as i64
-            ).fetch_all(&self.tummy_conn_pool).await?
-        };
-        Ok(fetched_messages.iter().map(|e| {
-            (
-                models::Message::from_db_message_and_user(e),
-                models::User::from_db_message_and_user(e),
+                channel_id,
+                *msgs_per_page as i64
             )
-        }).collect())
+            .fetch_all(&self.tummy_conn_pool)
+            .await?
+        };
+        Ok(fetched_messages
+            .iter()
+            .map(|e| {
+                (
+                    models::Message::from_db_message_and_user(e),
+                    models::User::from_db_message_and_user(e),
+                )
+            })
+            .collect())
     }
 }

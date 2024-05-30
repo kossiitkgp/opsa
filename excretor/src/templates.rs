@@ -1,4 +1,4 @@
-use crate::models::{Message, User, Channel};
+use crate::models::{Channel, Message, User};
 use askama::Template;
 
 #[derive(Template)]
@@ -23,7 +23,7 @@ pub struct ChannelTemplate {
     pub channel: Channel,
 }
 
-fn generate_trigger (messages: &[(Message, User)]) -> bool {
+fn generate_trigger(messages: &[(Message, User)]) -> bool {
     messages.len() == 10
 }
 

@@ -35,10 +35,18 @@ mod handlers {
     use sqlx::types::chrono;
     use tokio_util::io::ReaderStream;
 
-    #[derive(Deserialize)]
-    pub struct Pagination {
-        last_msg_timestamp: Option<String>,
-        per_page: u32,
+    pub(super) struct AppError(color_eyre::eyre::Error);
+
+    impl IntoResponse for AppError {
+        fn into_response(self) -> axum::response::Response {
+            tracing::error!("An error occured: {}", self.0);
+
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                String::from("Something went wrong. Please try again later"),
+            )
+                .into_response()
+        }
     }
 
     #[derive(Deserialize)]
@@ -50,58 +58,51 @@ mod handlers {
 
     /// Utility function for mapping any error into a `500 Internal Server Error`
     /// response.
-    fn internal_error<E>(err: E) -> (StatusCode, Response)
+    impl<E> From<E> for AppError
     where
-        E: std::error::Error,
+        E: Into<color_eyre::eyre::Error>,
     {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Html(
-                templates::ErrTemplate {
-                    err_string: err.to_string(),
-                }
-                .render()
-                .unwrap(),
-            )
-            .into_response(),
-        )
+        fn from(err: E) -> Self {
+            Self(err.into())
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct Pagination {
+        last_msg_timestamp: Option<String>,
+        per_page: u32,
     }
 
     // basic handler that responds with a static string
-    pub(super) async fn root(State(state): State<RouterState>) -> (StatusCode, Response) {
-        match state.tummy.get_all_channels().await.map_err(internal_error) {
-            Err(err) => err,
-            Ok(channels) => (
-                StatusCode::OK,
-                Html(templates::IndexTemplate { channels }.render().unwrap()).into_response(),
-            ),
-        }
+    pub(super) async fn root(
+        State(state): State<RouterState>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let channels = state.tummy.get_all_channels().await?;
+
+        Ok((
+            StatusCode::OK,
+            Html(templates::IndexTemplate { channels }.render()?).into_response(),
+        ))
     }
 
     pub(super) async fn load_channel(
         State(state): State<RouterState>,
-        Path(channel_name): Path<String>,
-    ) -> (StatusCode, Response) {
-        match state
-            .tummy
-            .get_channel_info(&channel_name)
-            .await
-            .map_err(internal_error)
-        {
-            Err(err) => err,
-            Ok(channel) => (
-                StatusCode::OK,
-                Html(templates::ChannelTemplate { channel }.render().unwrap()).into_response(),
-            ),
-        }
+        Path(channel): Path<String>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let channel = state.tummy.get_channel_info(&channel).await?;
+
+        Ok((
+            StatusCode::OK,
+            Html(templates::ChannelTemplate { channel }.render()?).into_response(),
+        ))
     }
 
     pub(super) async fn get_messages(
         State(state): State<RouterState>,
         Path(channel_id): Path<String>,
         pagination: Query<Pagination>,
-    ) -> (StatusCode, Response) {
-        match state
+    ) -> Result<(StatusCode, Response), AppError> {
+        let messages = state
             .tummy
             .fetch_msg_page(
                 &channel_id,
@@ -111,113 +112,90 @@ mod handlers {
                     .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts)),
                 &pagination.per_page,
             )
-            .await
-            .map_err(internal_error)
-        {
-            Err(err) => err,
-            Ok(messages) => {
-                let new_last_msg_timestamp = messages
-                    .last()
-                    .map(|(message, _user)| message.timestamp)
-                    .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
-                (
-                    StatusCode::OK,
-                    Html(
-                        templates::ChannelPageTemplate {
-                            messages,
-                            last_msg_timestamp: new_last_msg_timestamp.to_string(),
-                            channel_id,
-                        }
-                        .render()
-                        .unwrap(),
-                    )
-                    .into_response(),
-                )
-            }
-        }
+            .await?;
+
+        let new_last_msg_timestamp = messages
+            .last()
+            .map(|(message, _user)| message.timestamp)
+            .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
+
+        Ok((
+            StatusCode::OK,
+            Html(
+                templates::ChannelPageTemplate {
+                    messages,
+                    last_msg_timestamp: new_last_msg_timestamp.to_string(),
+                    channel_id,
+                }
+                .render()?,
+            )
+            .into_response(),
+        ))
     }
 
     pub(super) async fn get_replies(
         State(state): State<RouterState>,
         message_data: Query<ReplyRequest>,
-    ) -> (StatusCode, Response) {
-        match state
+    ) -> Result<(StatusCode, Response), AppError> {
+        let messages = state
             .tummy
             .fetch_replies(
                 &message_data.ts,
                 &message_data.channel_id,
                 &message_data.user_id,
             )
-            .await
-            .map_err(internal_error)
-        {
-            Err(err) => err,
-            Ok(messages) => {
-                (
-                    StatusCode::OK,
-                    Html(
-                        templates::ThreadTemplate {
-                            messages,
-                            parent_ts: message_data.ts.clone(),
-                            channel_id: message_data.channel_id.clone(),
-                            parent_user_id: message_data.user_id.clone(),
-                        }
-                        .render()
-                        .unwrap(),
-                    )
-                    .into_response(),
-                )
-            }
-        }
+            .await?;
+
+        Ok((
+            StatusCode::OK,
+            Html(
+                templates::ThreadTemplate {
+                    messages,
+                    parent_ts: message_data.ts.clone(),
+                    channel_id: message_data.channel_id.clone(),
+                    parent_user_id: message_data.user_id.clone(),
+                }
+                .render()
+                .unwrap(),
+            )
+            .into_response(),
+        ))
     }
 
-    pub(super) async fn fallback_avatar() -> (StatusCode, Response) {
-        (
+    pub(super) async fn fallback_avatar() -> Result<(StatusCode, Response), AppError> {
+        Ok((
             StatusCode::OK,
-            Html(templates::FallbackAvatarTemplate.render().unwrap()).into_response(),
-        )
+            Html(templates::FallbackAvatarTemplate.render()?).into_response(),
+        ))
     }
 
     pub(super) async fn assets(
         State(state): State<RouterState>,
         Path(filepath): Path<String>,
-    ) -> (StatusCode, Response) {
-        // TODO: Remove the unwrap once axum error handling is oxidized. (Issue #27)
+    ) -> Result<(StatusCode, Response), AppError> {
         let final_file_path = state
             .env_vars
             .static_assets_dir
             .join(&filepath)
-            .canonicalize()
-            .unwrap();
+            .canonicalize()?;
 
         if final_file_path.starts_with(state.env_vars.static_assets_dir) {
-            match tokio::fs::File::open(final_file_path).await {
-                Ok(file) => {
-                    let stream = ReaderStream::new(file);
-                    let body = Body::from_stream(stream);
+            let file = tokio::fs::File::open(final_file_path).await?;
 
-                    (StatusCode::OK, body.into_response())
-                }
-                Err(err) => {
-                    tracing::warn!("Error while serving asset file `{}`: {}", filepath, err);
+            let stream = ReaderStream::new(file);
+            let body = Body::from_stream(stream);
 
-                    (
-                        StatusCode::NOT_FOUND,
-                        Body::from(String::from("The requested file was not found."))
-                            .into_response(),
-                    )
-                }
-            }
+            Ok((StatusCode::OK, body.into_response()))
         } else {
             tracing::warn!(
                 "A mortal requested to access forbidden file `{}`.",
                 filepath
             );
 
-            (
+            Ok((
             	StatusCode::FORBIDDEN,
              	Body::from(String::from("Mortals are forbidden from accessing the requested file. This sin will be reported.")).into_response()
-            )
+            ))
         }
     }
 }

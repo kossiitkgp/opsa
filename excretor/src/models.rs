@@ -1,5 +1,5 @@
-use sqlx::types::chrono;
 use crate::{dbmodels, tummy::SlackDateTime};
+use sqlx::types::chrono;
 
 pub enum MessageType {
     Parent,
@@ -48,7 +48,6 @@ impl Message {
     }
 }
 
-
 pub struct User {
     pub id: String,
     pub name: String,
@@ -67,7 +66,11 @@ impl User {
             name: db_message_and_user.name.clone(),
             real_name: db_message_and_user.real_name.clone(),
             display_name: db_message_and_user.display_name.clone(),
-            image_url: if let Some(url) = &db_message_and_user.image_url { url.clone() } else { "/assets/avatar.png".into() },
+            image_url: if let Some(url) = &db_message_and_user.image_url {
+                url.clone()
+            } else {
+                "/assets/avatar.png".into()
+            },
             email: db_message_and_user.email.clone(),
             deleted: db_message_and_user.deleted,
             is_bot: db_message_and_user.is_bot,
@@ -79,7 +82,11 @@ impl User {
             name: db_reply.name.clone(),
             real_name: db_reply.real_name.clone(),
             display_name: db_reply.display_name.clone(),
-            image_url: if let Some(url) = &db_reply.image_url { url.clone() } else { "/assets/avatar.png".into() },
+            image_url: if let Some(url) = &db_reply.image_url {
+                url.clone()
+            } else {
+                "/assets/avatar.png".into()
+            },
             email: db_reply.email.clone(),
             deleted: db_reply.deleted,
             is_bot: db_reply.is_bot,
@@ -103,5 +110,4 @@ impl Channel {
             purpose: db_channel.purpose.to_owned().unwrap_or("".into()),
         }
     }
-    
 }
