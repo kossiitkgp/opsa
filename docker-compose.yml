@@ -57,6 +57,7 @@ services:
             - TUMMY_PORT=${TUMMY_PORT}
             - TUMMY_HOST=tummy
             - STATIC_ASSETS_DIR=${STATIC_ASSETS_DIR}
+            - SQLX_OFFLINE=true
         ports:
             - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
         networks:
