@@ -82,6 +82,8 @@ mod handlers {
         token: String,
     }
 
+    const FORBIDDEN_MSG: &str = "Mortals are forbidden from accessing the site";
+
     // basic handler that responds with a static string
     pub(super) async fn root(
         State(state): State<RouterState>,
@@ -110,7 +112,7 @@ mod handlers {
         if response.status() != StatusCode::OK {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from("Mortals are forbidden from accessing the site").into_response()
+                Body::from(FORBIDDEN_MSG).into_response()
             ));
         }
 
@@ -118,7 +120,7 @@ mod handlers {
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from("Mortals are forbidden from accessing the site").into_response()
+                Body::from(FORBIDDEN_MSG).into_response()
             ));
         }
 
@@ -251,7 +253,7 @@ mod handlers {
         if response.status() != StatusCode::OK {
             return Ok((
                 StatusCode::UNAUTHORIZED, 
-                Body::from("Mortals are forbidden from accessing the site").into_response()
+                Body::from(FORBIDDEN_MSG).into_response()
             ));
         }
 
@@ -266,7 +268,7 @@ mod handlers {
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from("Mortals are forbidden from accessing the site").into_response()
+                Body::from(FORBIDDEN_MSG).into_response()
             ));
         }
 
