@@ -71,7 +71,7 @@ mod handlers {
 
         Ok((
             StatusCode::OK,
-            Html(templates::IndexTemplate { channels }.render()?).into_response(),
+            Html(templates::IndexTemplate { title: state.env_vars.title, description: state.env_vars.description, channels }.render()?).into_response(),
         ))
     }
 
