@@ -218,7 +218,7 @@ mod handlers {
     pub(super) async fn auth(
         State(state): State<RouterState>,
     ) -> Result<(StatusCode, Response), AppError> {
-        let scopes = "channels:read";
+        let scopes = "im:read";
         let slack_auth_url = format!(
             "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}",
             state.env_vars.slack_client_id, scopes, state.env_vars.slack_redirect_uri
