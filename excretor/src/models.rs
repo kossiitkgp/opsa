@@ -37,6 +37,22 @@ pub struct User {
 }
 
 impl User {
+    pub fn from_db_user(db_user: &dbmodels::DBUser) -> Self {
+        User {
+            id: db_user.id.clone(),
+            name: db_user.name.clone(),
+            real_name: db_user.real_name.clone(),
+            display_name: db_user.display_name.clone(),
+            image_url: if let Some(url) = &db_user.image_url {
+                url.clone()
+            } else {
+                "/assets/avatar.png".into()
+            },
+            email: db_user.email.clone(),
+            deleted: db_user.deleted,
+            is_bot: db_user.is_bot,
+        }
+    }
     pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
         User {
             id: db_message_and_user.id.clone(),
