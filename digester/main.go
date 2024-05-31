@@ -360,7 +360,9 @@ func main() {
 
 			var messagesOfChannel []Message
 			err = json.Unmarshal(messagesFile, &messagesOfChannel)
-			CheckError(err)
+			if err != nil {
+				log.Warn().Err(err).Msg(messageFilePath)
+			}
 
 			for _, message := range messagesOfChannel {
 				message.ChannelID = channel.ID
