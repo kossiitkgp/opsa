@@ -8,6 +8,8 @@ pub struct Base;
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
+    pub title: String,
+    pub description: String,
     pub channels: Vec<Channel>,
 }
 

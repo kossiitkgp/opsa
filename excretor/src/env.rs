@@ -20,6 +20,10 @@ pub struct EnvVars {
     pub tummy_host: String,
     #[arg(env, default_value = "3000")]
     pub excretor_port: String,
+    #[arg(env, default_value = "OPSA")]
+    pub title: String,
+    #[arg(env, default_value = "Our Precious Slack Archive")]
+    pub description: String,
 }
 
 impl EnvVars {
