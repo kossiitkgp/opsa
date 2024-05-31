@@ -61,6 +61,7 @@ const (
 	USERS_FILEPATH    = EXTRACTION_DIR + "/users.json"
 	CHANNELS_FILEPATH = EXTRACTION_DIR + "/channels.json"
 	SLACKBOT_ID       = "USLACKBOT"
+	UNKNOWN_USER_ID   = "UNKNOWNUSER"
 )
 
 var (
@@ -273,6 +274,20 @@ func main() {
 		log.Info().Msg("Slackbot not found in tummy. Adding it to the users list.")
 	}
 
+	_, unknownUserExists := userSet[UNKNOWN_USER_ID]
+	if !unknownUserExists {
+		unknownUser := User{
+			ID:      UNKNOWN_USER_ID,
+			Name:    "unknown-user",
+			Deleted: false,
+			IsBot:   false,
+		}
+		unknownUser.Profile.DisplayName = "Unknown User"
+		unknownUser.Profile.RealName = "Unknown User"
+		users = append(users, unknownUser)
+		log.Info().Msg("Unknown User not found in tummy. Adding it to the users list.")
+	}
+
 	newUsersCount := 0
 	oldUsersUpdatedCount := 0
 	bar := getProgressBar(len(users), "[cyan][1/4][reset] Extracting and digesting users...             ")
@@ -360,17 +375,22 @@ func main() {
 
 			var messagesOfChannel []Message
 			err = json.Unmarshal(messagesFile, &messagesOfChannel)
-			CheckError(err)
+			if err != nil {
+				log.Warn().Err(err).Msg(messageFilePath)
+			}
 
 			for _, message := range messagesOfChannel {
 				message.ChannelID = channel.ID
 				if message.UserID == "" {
 					if message.BotID == "" {
-						continue
+						message.UserID = UNKNOWN_USER_ID
 					} else {
 						if _, userExists := userSet[message.BotID]; userExists {
 							message.UserID = message.BotID
 						} else {
+							if message.BotUsername == "" {
+								message.BotUsername = "unknown-bot"
+							}
 							newBot := User{
 								ID:      message.BotID,
 								Name:    message.BotUsername,
@@ -390,6 +410,8 @@ func main() {
 							message.UserID = message.BotID
 						}
 					}
+				} else if _, userExists := userSet[message.UserID]; !userExists {
+					message.UserID = UNKNOWN_USER_ID // User might not exist in org if it is a shared channel
 				}
 
 				switch message.SubType {
