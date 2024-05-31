@@ -7,9 +7,11 @@
     --sidebar-hover: #d0d0d0;
     --border-color: #e0e0e0;
 
-    --sidebar-width: 300px;
+    --sidebar-width: 15vw;
     --channel-header-height: 130px;
     --avatar-size: 30px;
+
+    --thread-container-width: 30vw;
 }
 
 * {
@@ -27,7 +29,6 @@ body {
 #app {
     display: flex;
     flex-direction: row;
-    align-items: center;
     justify-content: center;
     height: 100vh;
     width: 100%;
@@ -74,7 +75,8 @@ body {
 
 .channel-content {
     height: 100%;
-    width: calc(100% - var(--sidebar-width));
+    width: calc(100% - var(--sidebar-width) - var(--thread-container-width));
+    flex-grow: 1;
 }
 
 .channel-header {
@@ -198,4 +200,36 @@ body {
 .message .message-inner-container .message-content pre code {
     background-color: transparent;
     color: var(--text-primary);
+}
+
+.replies {
+    font-size: 14px;
+    color: blue;
+    margin-top: 0.2rem;
+    cursor: pointer;
+}
+
+.thread-container {
+    height: 100vh;
+    width: var(--thread-container-width);
+    padding: 0.5rem 1.5rem;
+    overflow-y: scroll;
+    border-left: 1px solid var(--border-color);
+}
+
+.thread-container .thread-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.thread-container .thread-header .close {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-size: 2.2rem;
 }

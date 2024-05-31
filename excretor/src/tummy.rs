@@ -7,9 +7,9 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser},
+    dbmodels::{DBChannel, DBParentMessage, DBReply},
     env::EnvVars,
-    models::{self, Channel, Message, User},
+    models::{self, Channel, Message},
 };
 
 #[derive(Clone)]
@@ -58,10 +58,7 @@ impl Tummy {
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
-        Ok(db_channels
-            .iter()
-            .map(models::Channel::from_db_channel)
-            .collect())
+        Ok(db_channels.into_iter().map(models::Channel::from).collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
@@ -72,7 +69,31 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::Channel::from_db_channel(&channel))
+        Ok(models::Channel::from(channel))
+    }
+
+    pub async fn fetch_replies(
+        &self,
+        message_ts: &str,
+        channel_id: &str,
+        user_id: &str,
+    ) -> Result<Vec<Message>, sqlx::Error> {
+        let replies = query_as!(
+            DBReply,
+            r#"
+            SELECT messages.*, users.*
+            FROM messages
+            INNER JOIN users ON users.id = messages.user_id
+            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
+            ORDER BY ts ASC
+            "#,
+            chrono::NaiveDateTime::from_pg_ts(message_ts),
+            channel_id,
+            user_id
+        )
+        .fetch_all(&self.tummy_conn_pool)
+        .await?;
+        Ok(replies.into_iter().map(models::Message::from).collect())
     }
 
     pub async fn fetch_msg_page(
@@ -80,16 +101,22 @@ impl Tummy {
         channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
-    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+    ) -> Result<Vec<Message>, sqlx::Error> {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 r#"
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1 AND ts > $2
-                ORDER BY ts ASC LIMIT $3
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = 'C0H8SBPBM'
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND ts < $2 AND messages.parent_user_id = ''
+                ORDER BY ts DESC LIMIT $3
                 "#,
                 channel_id,
                 timestamp,
@@ -99,13 +126,19 @@ impl Tummy {
             .await?
         } else {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 "
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1
-                ORDER BY ts ASC LIMIT $2
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = 'C0H8SBPBM'
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND messages.parent_user_id = ''
+                ORDER BY ts DESC LIMIT $2
 	            ",
                 channel_id,
                 *msgs_per_page as i64
@@ -114,13 +147,8 @@ impl Tummy {
             .await?
         };
         Ok(fetched_messages
-            .iter()
-            .map(|e| {
-                (
-                    models::Message::from_db_message_and_user(e),
-                    models::User::from_db_message_and_user(e),
-                )
-            })
+            .into_iter()
+            .map(models::Message::from)
             .collect())
     }
 }

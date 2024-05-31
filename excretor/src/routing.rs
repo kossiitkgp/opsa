@@ -15,6 +15,7 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/assets/*file", get(handlers::assets))
+        .route("/replies", get(handlers::get_replies))
         .with_state(RouterState { tummy, env_vars })
 }
 
@@ -48,6 +49,15 @@ mod handlers {
         }
     }
 
+    #[derive(Deserialize)]
+    pub struct ReplyRequest {
+        pub channel_id: String,
+        pub ts: String,
+        pub user_id: String,
+    }
+
+    /// Utility function for mapping any error into a `500 Internal Server Error`
+    /// response.
     impl<E> From<E> for AppError
     where
         E: Into<color_eyre::eyre::Error>,
@@ -106,7 +116,7 @@ mod handlers {
 
         let new_last_msg_timestamp = messages
             .last()
-            .map(|(message, _user)| message.timestamp)
+            .map(|message| message.timestamp)
             .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
 
         Ok((
@@ -118,6 +128,35 @@ mod handlers {
                     channel_id,
                 }
                 .render()?,
+            )
+            .into_response(),
+        ))
+    }
+
+    pub(super) async fn get_replies(
+        State(state): State<RouterState>,
+        message_data: Query<ReplyRequest>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let messages = state
+            .tummy
+            .fetch_replies(
+                &message_data.ts,
+                &message_data.channel_id,
+                &message_data.user_id,
+            )
+            .await?;
+
+        Ok((
+            StatusCode::OK,
+            Html(
+                templates::ThreadTemplate {
+                    messages,
+                    parent_ts: message_data.ts.clone(),
+                    channel_id: message_data.channel_id.clone(),
+                    parent_user_id: message_data.user_id.clone(),
+                }
+                .render()
+                .unwrap(),
             )
             .into_response(),
         ))

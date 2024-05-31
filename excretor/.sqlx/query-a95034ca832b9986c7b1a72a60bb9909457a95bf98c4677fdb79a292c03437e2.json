@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT messages.*, users.*\n                FROM messages\n                INNER JOIN users ON users.id = messages.user_id\n                WHERE channel_id = $1 AND ts > $2\n                ORDER BY ts ASC LIMIT $3\n                ",
+  "query": "\n            SELECT messages.*, users.*\n            FROM messages\n            INNER JOIN users ON users.id = messages.user_id\n            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3\n            ORDER BY ts ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -76,9 +76,9 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
         "Timestamp",
-        "Int8"
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -98,5 +98,5 @@
       true
     ]
   },
-  "hash": "6c721808f0e51835aaa2d49a6eb78f610eef8fe3e7a26923da606a9523873412"
+  "hash": "a95034ca832b9986c7b1a72a60bb9909457a95bf98c4677fdb79a292c03437e2"
 }

@@ -1,4 +1,7 @@
-use crate::{dbmodels, tummy::SlackDateTime};
+use crate::{
+    dbmodels::{DBChannel, DBParentMessage, DBReply},
+    tummy::SlackDateTime,
+};
 use sqlx::types::chrono;
 
 pub struct Message {
@@ -9,18 +12,64 @@ pub struct Message {
     pub thread_timestamp: Option<chrono::NaiveDateTime>,
     pub parent_user_id: Option<String>,
     pub formatted_timestamp: String,
+    pub thread_count: i64,
+    pub user: User,
 }
 
-impl Message {
-    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
+impl From<DBParentMessage> for Message {
+    fn from(item: DBParentMessage) -> Self {
         Message {
-            channel_id: db_message_and_user.channel_id.clone(),
-            user_id: db_message_and_user.user_id.clone(),
-            text: db_message_and_user.msg_text.clone(),
-            timestamp: db_message_and_user.ts,
-            thread_timestamp: db_message_and_user.thread_ts,
-            parent_user_id: db_message_and_user.parent_user_id.clone(),
-            formatted_timestamp: db_message_and_user.ts.human_format(),
+            channel_id: item.channel_id,
+            user_id: item.user_id,
+            text: item.msg_text,
+            timestamp: item.ts,
+            thread_timestamp: item.thread_ts,
+            parent_user_id: item.parent_user_id,
+            formatted_timestamp: item.ts.human_format(),
+            thread_count: item.cnt.unwrap_or(0),
+            user: User {
+                id: item.id,
+                name: item.name,
+                real_name: item.real_name,
+                display_name: item.display_name,
+                image_url: if let Some(url) = item.image_url {
+                    url
+                } else {
+                    "/assets/avatar.png".into()
+                },
+                email: item.email,
+                deleted: item.deleted,
+                is_bot: item.is_bot,
+            },
+        }
+    }
+}
+
+impl From<DBReply> for Message {
+    fn from(item: DBReply) -> Self {
+        Message {
+            channel_id: item.channel_id,
+            user_id: item.user_id,
+            text: item.msg_text,
+            timestamp: item.ts,
+            thread_timestamp: item.thread_ts,
+            parent_user_id: item.parent_user_id,
+            formatted_timestamp: item.ts.human_format(),
+            thread_count: 0,
+            user: User {
+                id: item.id,
+                name: item.name,
+                real_name: item.real_name,
+                display_name: item.display_name,
+                image_url: if let Some(url) = item.image_url {
+                    url
+                } else {
+                    "/assets/avatar.png".into()
+                },
+                email: item.email,
+                deleted: item.deleted,
+                is_bot: item.is_bot,
+            },
         }
     }
 }
@@ -36,25 +85,6 @@ pub struct User {
     pub is_bot: bool,
 }
 
-impl User {
-    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
-        User {
-            id: db_message_and_user.id.clone(),
-            name: db_message_and_user.name.clone(),
-            real_name: db_message_and_user.real_name.clone(),
-            display_name: db_message_and_user.display_name.clone(),
-            image_url: if let Some(url) = &db_message_and_user.image_url {
-                url.clone()
-            } else {
-                "/assets/avatar.png".into()
-            },
-            email: db_message_and_user.email.clone(),
-            deleted: db_message_and_user.deleted,
-            is_bot: db_message_and_user.is_bot,
-        }
-    }
-}
-
 pub struct Channel {
     pub id: String,
     pub name: String,
@@ -62,13 +92,13 @@ pub struct Channel {
     pub purpose: String,
 }
 
-impl Channel {
-    pub fn from_db_channel(db_channel: &dbmodels::DBChannel) -> Self {
+impl From<DBChannel> for Channel {
+    fn from(value: DBChannel) -> Self {
         Channel {
-            id: db_channel.id.clone(),
-            name: db_channel.name.clone(),
-            topic: db_channel.topic.to_owned().unwrap_or("".into()),
-            purpose: db_channel.purpose.to_owned().unwrap_or("".into()),
+            id: value.id,
+            name: value.name,
+            topic: value.topic.unwrap_or("".into()),
+            purpose: value.purpose.unwrap_or("".into()),
         }
     }
 }
