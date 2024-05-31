@@ -388,6 +388,9 @@ func main() {
 						if _, userExists := userSet[message.BotID]; userExists {
 							message.UserID = message.BotID
 						} else {
+							if message.BotUsername == "" {
+								message.BotUsername = "unknown-bot"
+							}
 							newBot := User{
 								ID:      message.BotID,
 								Name:    message.BotUsername,
