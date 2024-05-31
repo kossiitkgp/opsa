@@ -30,8 +30,10 @@ dev:
 	@echo "Starting tummy-dev with exposed port"
 	@$(DOCKER_COMPOSE) up tummy-dev -d --wait
 	@echo ""
-	@echo "Starting excretor in development mode."
+	@echo "Running sqlx prepare..."
 	@cd excretor && cargo sqlx prepare && cd ..
+	@echo ""
+	@echo "Starting excretor in development mode."
 	@bash -c "trap 'echo "";$(MAKEQ) dev-stop; exit 0' SIGINT SIGTERM ERR; $(EXCRETOR_DEV_ENVS) cargo watch -C '$(PROJECT_DIR)/excretor/' -c -x run --ignore '*.css';"
 # In case the excretor gracefully shuts down
 	@$(MAKEQ) dev-stop
