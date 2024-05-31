@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT messages.*, users.*, c.cnt\n                FROM messages\n                INNER JOIN users ON users.id = messages.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id\n                WHERE channel_id = $1 AND ts < $2 AND messages.parent_user_id = ''\n                ORDER BY ts DESC LIMIT $3\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "msg_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "thread_ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "parent_user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "real_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "deleted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "is_bot",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "image_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamp",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "29cac7b73dc8de95214f5543351be7168c5e26dfb82db04dc871e4ee5e6b04ff"
+}
