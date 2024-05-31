@@ -33,7 +33,11 @@ impl From<DBParentMessage> for Message {
                 real_name: item.real_name,
                 display_name: item.display_name,
                 image_url: if let Some(url) = item.image_url {
-                    url
+                    if !url.is_empty() {
+                        url
+                    } else {
+                        "/assets/avatar.png".into()
+                    }
                 } else {
                     "/assets/avatar.png".into()
                 },
@@ -62,7 +66,11 @@ impl From<DBReply> for Message {
                 real_name: item.real_name,
                 display_name: item.display_name,
                 image_url: if let Some(url) = item.image_url {
-                    url
+                    if !url.is_empty() {
+                        url
+                    } else {
+                        "/assets/avatar.png".into()
+                    }
                 } else {
                     "/assets/avatar.png".into()
                 },
