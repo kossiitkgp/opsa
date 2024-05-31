@@ -112,11 +112,11 @@ impl Tummy {
                 LEFT JOIN (
                     SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
                     FROM messages
-                    WHERE channel_id = 'C0H8SBPBM'
+                    WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
                 ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
-                WHERE channel_id = $1 AND ts < $2 AND messages.parent_user_id = ''
-                ORDER BY ts DESC LIMIT $3
+                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''
+                ORDER BY ts ASC LIMIT $3
                 "#,
                 channel_id,
                 timestamp,
@@ -134,11 +134,11 @@ impl Tummy {
                 LEFT JOIN (
                     SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
                     FROM messages
-                    WHERE channel_id = 'C0H8SBPBM'
+                    WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
                 ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
                 WHERE channel_id = $1 AND messages.parent_user_id = ''
-                ORDER BY ts DESC LIMIT $2
+                ORDER BY ts ASC LIMIT $2
 	            ",
                 channel_id,
                 *msgs_per_page as i64
