@@ -78,8 +78,7 @@ mod handlers {
 
     #[derive(Deserialize)]
     pub struct AuthToken {
-        #[serde(default = "String::new")]
-        token: String,
+        token: Option<String>,
     }
 
     const FORBIDDEN_MSG: &str = "Mortals are forbidden from accessing the site";
@@ -89,7 +88,7 @@ mod handlers {
         State(state): State<RouterState>,
         Query(auth_token): Query<AuthToken>,
     ) -> Result<(StatusCode, Response), AppError> {
-        if auth_token.token.is_empty() {
+        if auth_token.token.is_none() {
             return Ok((
                 StatusCode::FOUND,
                 Response::builder()
@@ -99,9 +98,9 @@ mod handlers {
             ));
         }
 
-        let token = auth_token.token.clone();
+        // verify the jwt token and accessing slack auth test api
         let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
-        let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;
+        let claims: BTreeMap<String, String> = auth_token.token.unwrap().verify_with_key(&key)?;
         let user_id = claims.get("user_id").unwrap();
         let access_token = claims.get("access_token").unwrap();
 
@@ -236,7 +235,7 @@ mod handlers {
         ))
     }
 
-    // get request with params
+
     pub(super) async fn auth_callback(
         State(state): State<RouterState>,
         Query(request): Query<AuthCallback>,

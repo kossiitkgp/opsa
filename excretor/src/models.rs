@@ -11,8 +11,8 @@ pub struct Message {
     pub formatted_timestamp: String,
 }
 
-impl Message {
-    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
+impl From<&dbmodels::DBMessageAndUser> for Message {
+    fn from(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
         Message {
             channel_id: db_message_and_user.channel_id.clone(),
             user_id: db_message_and_user.user_id.clone(),
@@ -36,34 +36,35 @@ pub struct User {
     pub is_bot: bool,
 }
 
-impl User {
-    pub fn from_db_user(db_user: &dbmodels::DBUser) -> Self {
+impl From<&dbmodels::DBUser> for User {
+    fn from(db_user: &dbmodels::DBUser) -> Self {
         User {
             id: db_user.id.clone(),
             name: db_user.name.clone(),
             real_name: db_user.real_name.clone(),
             display_name: db_user.display_name.clone(),
-            image_url: if let Some(url) = &db_user.image_url {
-                url.clone()
-            } else {
-                "/assets/avatar.png".into()
-            },
+            image_url: db_user
+                .image_url
+                .clone()
+                .unwrap_or_else(|| "/assets/avatar.png".into()),
             email: db_user.email.clone(),
             deleted: db_user.deleted,
             is_bot: db_user.is_bot,
         }
     }
-    pub fn from_db_message_and_user(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
+}
+
+impl From<&dbmodels::DBMessageAndUser> for User {
+    fn from(db_message_and_user: &dbmodels::DBMessageAndUser) -> Self {
         User {
             id: db_message_and_user.id.clone(),
             name: db_message_and_user.name.clone(),
             real_name: db_message_and_user.real_name.clone(),
             display_name: db_message_and_user.display_name.clone(),
-            image_url: if let Some(url) = &db_message_and_user.image_url {
-                url.clone()
-            } else {
-                "/assets/avatar.png".into()
-            },
+            image_url: db_message_and_user
+                .image_url
+                .clone()
+                .unwrap_or_else(|| "/assets/avatar.png".into()),
             email: db_message_and_user.email.clone(),
             deleted: db_message_and_user.deleted,
             is_bot: db_message_and_user.is_bot,
@@ -78,13 +79,13 @@ pub struct Channel {
     pub purpose: String,
 }
 
-impl Channel {
-    pub fn from_db_channel(db_channel: &dbmodels::DBChannel) -> Self {
+impl From<&dbmodels::DBChannel> for Channel {
+    fn from(db_channel: &dbmodels::DBChannel) -> Self {
         Channel {
             id: db_channel.id.clone(),
             name: db_channel.name.clone(),
-            topic: db_channel.topic.to_owned().unwrap_or("".into()),
-            purpose: db_channel.purpose.to_owned().unwrap_or("".into()),
+            topic: db_channel.topic.clone().unwrap_or_else(|| "".into()),
+            purpose: db_channel.purpose.clone().unwrap_or_else(|| "".into()),
         }
     }
 }

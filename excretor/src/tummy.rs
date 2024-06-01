@@ -60,7 +60,7 @@ impl Tummy {
 
         Ok(db_channels
             .iter()
-            .map(models::Channel::from_db_channel)
+            .map(models::Channel::from)
             .collect())
     }
 
@@ -72,7 +72,7 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::Channel::from_db_channel(&channel))
+        Ok(models::Channel::from(&channel))
     }
 
     pub async fn fetch_msg_page(
@@ -117,8 +117,8 @@ impl Tummy {
             .iter()
             .map(|e| {
                 (
-                    models::Message::from_db_message_and_user(e),
-                    models::User::from_db_message_and_user(e),
+                    models::Message::from(e),
+                    models::User::from(e),
                 )
             })
             .collect())
@@ -132,6 +132,6 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::User::from_db_user(&user))
+        Ok(models::User::from(&user))
     }
 }

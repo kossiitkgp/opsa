@@ -16,7 +16,7 @@ pub struct EnvVars {
     pub slack_client_secret: String,
     #[arg(env)]
     pub slack_signing_secret: String,
-    #[arg(env, default_value = "")]
+    #[arg(env)]
     pub slack_redirect_uri: String,
     #[arg(env, default_value = "postgres://localhost/tummy")]
     pub database_url: String,
