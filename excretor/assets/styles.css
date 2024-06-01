@@ -42,6 +42,7 @@ body {
     border-right: 1px solid var(--border-color);
     overflow-y: scroll;
     padding: 0.8rem 1.2rem;
+    scrollbar-gutter: stable;
 }
 
 .channels-sidebar h1 {
@@ -237,19 +238,22 @@ body {
     font-size: 2.2rem;
 }
 
+.channels-sidebar::-webkit-scrollbar-track,
 .message-container::-webkit-scrollbar-track,
 .thread-container::-webkit-scrollbar-track {
-    background-color: var(--sidebar-hover);
+    background-color: var(--sidebar-background);
 }
 
+.channels-sidebar::-webkit-scrollbar,
 .message-container::-webkit-scrollbar,
 .thread-container::-webkit-scrollbar {
     background-color: transparent;
-    width: 8px;
+    width: 6px;
 }
 
+.channels-sidebar::-webkit-scrollbar-thumb,
 .message-container::-webkit-scrollbar-thumb,
 .thread-container::-webkit-scrollbar-thumb {
-    background-color: var(--text-secondary);
+    background-color: #999;
     border-radius: 3px;
 }
