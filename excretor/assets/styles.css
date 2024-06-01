@@ -97,6 +97,7 @@ body {
     height: calc(100vh - var(--channel-header-height));
     padding: 0.5rem 1.5rem;
     overflow-y: scroll;
+    scrollbar-gutter: stable;
 }
 
 .message {
@@ -215,6 +216,7 @@ body {
     padding: 0.5rem 1.5rem;
     overflow-y: scroll;
     border-left: 1px solid var(--border-color);
+    scrollbar-gutter: stable;
 }
 
 .thread-container .thread-header {
@@ -232,4 +234,21 @@ body {
     background-color: transparent;
     color: var(--text-secondary);
     font-size: 2.2rem;
+}
+
+.message-container::-webkit-scrollbar-track,
+.thread-container::-webkit-scrollbar-track {
+    background-color: var(--sidebar-hover);
+}
+
+.message-container::-webkit-scrollbar,
+.thread-container::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+}
+
+.message-container::-webkit-scrollbar-thumb,
+.thread-container::-webkit-scrollbar-thumb {
+    background-color: var(--text-secondary);
+    border-radius: 3px;
 }
