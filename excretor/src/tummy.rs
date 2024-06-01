@@ -7,9 +7,9 @@ use sqlx::{
 use std::time::Duration;
 
 use crate::{
-    dbmodels::{DBChannel, DBMessageAndUser, DBUser},
+    dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
     env::EnvVars,
-    models::{Channel, Message, User},
+    models::{self, Channel, Message, User},
 };
 
 #[derive(Clone)]
@@ -58,11 +58,11 @@ impl Tummy {
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
-        Ok(db_channels.iter().map(Channel::from).collect())
+        Ok(db_channels.into_iter().map(models::Channel::from).collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
-        let channel = &query_as!(
+        let channel = query_as!(
             DBChannel,
             "SELECT * FROM channels WHERE name = $1",
             channel_name
@@ -72,20 +72,50 @@ impl Tummy {
         Ok(channel.into())
     }
 
+    pub async fn fetch_replies(
+        &self,
+        message_ts: &str,
+        channel_id: &str,
+        user_id: &str,
+    ) -> Result<Vec<Message>, sqlx::Error> {
+        let replies = query_as!(
+            DBReply,
+            r#"
+            SELECT messages.*, users.*
+            FROM messages
+            INNER JOIN users ON users.id = messages.user_id
+            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
+            ORDER BY ts ASC
+            "#,
+            chrono::NaiveDateTime::from_pg_ts(message_ts),
+            channel_id,
+            user_id
+        )
+        .fetch_all(&self.tummy_conn_pool)
+        .await?;
+        Ok(replies.into_iter().map(models::Message::from).collect())
+    }
+
     pub async fn fetch_msg_page(
         &self,
         channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
-    ) -> Result<Vec<(Message, User)>, sqlx::Error> {
+    ) -> Result<Vec<Message>, sqlx::Error> {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 r#"
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1 AND ts > $2
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = $1
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''
                 ORDER BY ts ASC LIMIT $3
                 "#,
                 channel_id,
@@ -96,12 +126,18 @@ impl Tummy {
             .await?
         } else {
             query_as!(
-                DBMessageAndUser,
+                DBParentMessage,
                 "
-                SELECT messages.*, users.*
+                SELECT messages.*, users.*, c.cnt
                 FROM messages
                 INNER JOIN users ON users.id = messages.user_id
-                WHERE channel_id = $1
+                LEFT JOIN (
+                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                    FROM messages
+                    WHERE channel_id = $1
+                    GROUP BY join_ts, parent_user_id
+                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
+                WHERE channel_id = $1 AND messages.parent_user_id = ''
                 ORDER BY ts ASC LIMIT $2
 	            ",
                 channel_id,
@@ -111,13 +147,13 @@ impl Tummy {
             .await?
         };
         Ok(fetched_messages
-            .iter()
-            .map(|e| (Message::from(e), User::from(e)))
+            .into_iter()
+            .map(models::Message::from)
             .collect())
     }
 
     pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
-        let user = &query_as!(DBUser, "SELECT * FROM users WHERE id = $1", user_id)
+        let user = query_as!(DBUser, "SELECT * FROM users WHERE id = $1", user_id)
             .fetch_one(&self.tummy_conn_pool)
             .await?;
         Ok(user.into())

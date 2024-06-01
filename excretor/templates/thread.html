@@ -1,1 +1,38 @@
-<!-- templates/thread.html -->
+<div
+    class="thread-container"
+    id="replies-for-{{parent_ts}}{{parent_user_id}}{{channel_id}}"
+>
+    <div class="thread-header">
+        <h2>Replies</h2>
+        <!-- hx-get has this empty data url so that i donot have to install hyperscript -->
+        <button
+            class="close"
+            hx-trigger="click"
+            hx-get="data:text/html,"
+            hx-swap="delete"
+            hx-target=".thread-container"
+        >
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    {% for message in messages %}
+    <div class="message" id="{{ message.timestamp }}{{ message.user_id }}">
+        <img
+            class="avatar"
+            src="{{ message.user.image_url }}"
+            alt="User Avatar"
+            hx-trigger="error"
+            hx-swap="outerHTML"
+            hx-get="/fallback-avatar"
+            hx-target="this"
+        />
+        <div class="message-inner-container">
+            <div class="user-and-time">
+                <span class="name">{{ message.user.name }}</span>
+                <span class="time"> {{ message.formatted_timestamp }} </span>
+            </div>
+            <div class="message-content">{{ message.text|safe }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>

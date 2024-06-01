@@ -16,3 +16,12 @@
         </div>
     </div>
 </div>
+
+<!-- remove opened threads if any-->
+<!-- hx-get has this empty data url so that i donot have to install hyperscript -->
+<div
+    hx-trigger="load"
+    hx-get="data:text/html,"
+    hx-swap="delete"
+    hx-target=".thread-container"
+></div>

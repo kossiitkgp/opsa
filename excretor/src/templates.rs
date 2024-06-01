@@ -1,4 +1,4 @@
-use crate::models::{Channel, Message, User};
+use crate::models::{Channel, Message};
 use askama::Template;
 
 #[derive(Template)]
@@ -8,6 +8,8 @@ pub struct Base;
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
+    pub title: String,
+    pub description: String,
     pub channels: Vec<Channel>,
 }
 
@@ -23,16 +25,25 @@ pub struct ChannelTemplate {
     pub channel: Channel,
 }
 
-fn generate_trigger(messages: &[(Message, User)]) -> bool {
+fn generate_trigger(messages: &[Message]) -> bool {
     messages.len() == 10
 }
 
 #[derive(Template)]
 #[template(path = "channel_page.html")]
 pub struct ChannelPageTemplate {
-    pub messages: Vec<(Message, User)>,
+    pub messages: Vec<Message>,
     pub last_msg_timestamp: String,
     pub channel_id: String,
+}
+
+#[derive(Template)]
+#[template(path = "thread.html")]
+pub struct ThreadTemplate {
+    pub messages: Vec<Message>,
+    pub parent_ts: String,
+    pub channel_id: String,
+    pub parent_user_id: String,
 }
 
 #[derive(Template)]

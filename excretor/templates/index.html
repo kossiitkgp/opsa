@@ -1,7 +1,10 @@
 <!-- templates/index.html -->
 {% extends "base.html" %} {% block content %}
+<head>
+    <title>{{ title }} : {{ description }}</title>
+</head>
 <div class="channels-sidebar" id="main">
-    <h1>KOSS</h1>
+    <h1>{{ title }}</h1>
     <div id="channel-list">
         <ul class="channel-list">
             {% for channel in channels %}
@@ -29,4 +32,6 @@
         hx-swap="outerHTML"
     ></div>
 </div>
+
+<div class="thread-content"></div>
 {% endblock %}
