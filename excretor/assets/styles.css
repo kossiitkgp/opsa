@@ -143,7 +143,10 @@ body {
 }
 
 .message .message-inner-container span.mention {
-    color: blue;
+    background-color: #e0fbe2;
+    color: #0a6847;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
 }
 
 .message .message-inner-container .message-content {
