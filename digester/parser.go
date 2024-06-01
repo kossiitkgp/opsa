@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/enescakir/emoji"
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/rs/zerolog/log"
@@ -44,6 +46,11 @@ type TextStyle struct {
 	Strike bool `json:"strike"`
 	Code   bool `json:"code"`
 }
+
+const (
+	MENTION_START = "<mention>"
+	MENTION_END   = "</mention>"
+)
 
 func (s *Style) UnmarshalJSON(data []byte) error {
 	var listStyle string
@@ -185,7 +192,7 @@ func parseUser(element Element) string {
 	} else {
 		result += "unknown-user"
 	}
-	return "<span class=\"user-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseChannel(element Element) string {
@@ -197,7 +204,7 @@ func parseChannel(element Element) string {
 	} else {
 		result += element.ChannelID
 	}
-	return "<span class=\"channel-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseBroadcast(element Element) string {
@@ -205,7 +212,7 @@ func parseBroadcast(element Element) string {
 	if result == "@" {
 		result += "unknown-broadcast"
 	}
-	return "<span class=\"broadcast-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseLink(element Element) string {
@@ -289,13 +296,36 @@ func parseMessage(blocks []Block) string {
 		result += parseBlock(block) + "\n\n"
 	}
 
-	extensions := parser.CommonExtensions
+	extensions := parser.NoIntraEmphasis | parser.FencedCode | parser.Strikethrough
 	parser := parser.NewWithExtensions(extensions)
 	doc := parser.Parse([]byte(strings.TrimSpace(result)))
 
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-	opts := html.RendererOptions{Flags: htmlFlags}
+	opts := html.RendererOptions{Flags: htmlFlags, RenderNodeHook: renderHookHTML}
 	renderer := html.NewRenderer(opts)
 
 	return string(markdown.Render(doc, renderer))
+}
+
+func renderHookHTML(w io.Writer, node ast.Node, _ bool) (ast.WalkStatus, bool) {
+	htmlBlock, ok := node.(*ast.HTMLBlock)
+	if ok {
+		io.WriteString(w, "\n")
+		html.EscapeHTML(w, htmlBlock.Literal)
+		io.WriteString(w, "\n")
+		return ast.GoToNext, true
+	}
+
+	htmlSpan, ok := node.(*ast.HTMLSpan)
+	if ok {
+		if strings.EqualFold(string(htmlSpan.Literal), MENTION_START) {
+			io.WriteString(w, "<span class=\"mention\">")
+		} else if strings.EqualFold(string(htmlSpan.Literal), MENTION_END) {
+			io.WriteString(w, "</span>")
+		} else {
+			html.EscapeHTML(w, htmlSpan.Literal)
+		}
+		return ast.GoToNext, true
+	}
+	return ast.GoToNext, false
 }
