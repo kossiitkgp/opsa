@@ -141,15 +141,7 @@ body {
     color: var(--text-secondary);
 }
 
-.message .message-inner-container .user-mention {
-    color: blue;
-}
-
-.message .message-inner-container .channel-mention {
-    color: blue;
-}
-
-.message .message-inner-container .broadcast-mention {
+.message .message-inner-container span.mention {
     color: blue;
 }
 

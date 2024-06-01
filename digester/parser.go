@@ -47,6 +47,11 @@ type TextStyle struct {
 	Code   bool `json:"code"`
 }
 
+const (
+	MENTION_START = "<mention>"
+	MENTION_END   = "</mention>"
+)
+
 func (s *Style) UnmarshalJSON(data []byte) error {
 	var listStyle string
 	if err := json.Unmarshal(data, &listStyle); err == nil {
@@ -187,7 +192,7 @@ func parseUser(element Element) string {
 	} else {
 		result += "unknown-user"
 	}
-	return "<span class=\"user-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseChannel(element Element) string {
@@ -199,7 +204,7 @@ func parseChannel(element Element) string {
 	} else {
 		result += element.ChannelID
 	}
-	return "<span class=\"channel-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseBroadcast(element Element) string {
@@ -207,7 +212,7 @@ func parseBroadcast(element Element) string {
 	if result == "@" {
 		result += "unknown-broadcast"
 	}
-	return "<span class=\"broadcast-mention\">" + result + "</span>"
+	return MENTION_START + result + MENTION_END
 }
 
 func parseLink(element Element) string {
@@ -313,7 +318,13 @@ func renderHookHTML(w io.Writer, node ast.Node, _ bool) (ast.WalkStatus, bool) {
 
 	htmlSpan, ok := node.(*ast.HTMLSpan)
 	if ok {
-		html.EscapeHTML(w, htmlSpan.Literal)
+		if strings.EqualFold(string(htmlSpan.Literal), MENTION_START) {
+			io.WriteString(w, "<span class=\"mention\">")
+		} else if strings.EqualFold(string(htmlSpan.Literal), MENTION_END) {
+			io.WriteString(w, "</span>")
+		} else {
+			html.EscapeHTML(w, htmlSpan.Literal)
+		}
 		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
