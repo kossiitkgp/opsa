@@ -93,7 +93,6 @@ mod handlers {
 
     const FORBIDDEN_MSG: &str = "Mortals are forbidden from accessing the site";
 
-    
     pub(super) async fn root(
         State(state): State<RouterState>,
         Query(auth_token): Query<AuthToken>,
@@ -110,7 +109,7 @@ mod handlers {
                         .unwrap(),
                 ));
             }
-    
+
             let is_verified = _verify_token(auth_token.token.as_ref(), &state).await?;
             if !is_verified {
                 return Ok((
@@ -124,7 +123,15 @@ mod handlers {
 
         Ok((
             StatusCode::OK,
-            Html(templates::IndexTemplate { title: state.env_vars.title, description: state.env_vars.description, channels }.render()?).into_response(),
+            Html(
+                templates::IndexTemplate {
+                    title: state.env_vars.title,
+                    description: state.env_vars.description,
+                    channels,
+                }
+                .render()?,
+            )
+            .into_response(),
         ))
     }
 
@@ -310,8 +317,10 @@ mod handlers {
         ))
     }
 
-
-    pub async fn _verify_token(token: Option<&String>, state: &RouterState) -> Result<bool, AppError> {
+    pub async fn _verify_token(
+        token: Option<&String>,
+        state: &RouterState,
+    ) -> Result<bool, AppError> {
         // verify the jwt token and accessing slack auth test api
         let key: Hmac<Sha256> =
             Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
@@ -337,7 +346,6 @@ mod handlers {
 
         Ok(true)
     }
-
 
     pub(super) async fn login() -> Result<(StatusCode, Response), AppError> {
         Ok((

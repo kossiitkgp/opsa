@@ -116,7 +116,6 @@ impl From<DBUser> for User {
     }
 }
 
-
 pub struct Channel {
     pub id: String,
     pub name: String,
