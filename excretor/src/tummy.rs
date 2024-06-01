@@ -65,14 +65,14 @@ impl Tummy {
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
-        let channel = query_as!(
+        let channel = &query_as!(
             DBChannel,
             "SELECT * FROM channels WHERE name = $1",
             channel_name
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(From::from(&channel))
+        Ok(channel.into())
     }
 
     pub async fn fetch_msg_page(
@@ -125,13 +125,13 @@ impl Tummy {
     }
 
     pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
-        let user = query_as!(
+        let user = &query_as!(
             DBUser,
             "SELECT * FROM users WHERE id = $1",
             user_id
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(From::from(&user))
+        Ok(user.into())
     }
 }
