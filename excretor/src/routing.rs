@@ -33,14 +33,14 @@ mod handlers {
         http::StatusCode,
         response::{Html, Response},
     };
-    use serde::Deserialize;
-    use sqlx::types::chrono;
-    use tokio_util::io::ReaderStream;
-    use reqwest::Client;
     use hmac::{Hmac, Mac};
     use jwt::{SignWithKey, VerifyWithKey};
+    use reqwest::Client;
+    use serde::Deserialize;
     use sha2::Sha256;
+    use sqlx::types::chrono;
     use std::collections::BTreeMap;
+    use tokio_util::io::ReaderStream;
 
     pub(super) struct AppError(color_eyre::eyre::Error);
 
@@ -99,19 +99,23 @@ mod handlers {
         }
 
         // verify the jwt token and accessing slack auth test api
-        let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
+        let key: Hmac<Sha256> =
+            Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
         let claims: BTreeMap<String, String> = auth_token.token.unwrap().verify_with_key(&key)?;
         let user_id = claims.get("user_id").unwrap();
         let access_token = claims.get("access_token").unwrap();
 
         let slack_auth_test_url = "https://slack.com/api/auth.test";
-        let req = Client::new().get(slack_auth_test_url).header("Authorization", format!("Bearer {}", access_token)).build()?;
+        let req = Client::new()
+            .get(slack_auth_test_url)
+            .header("Authorization", format!("Bearer {}", access_token))
+            .build()?;
         let response = Client::new().execute(req).await?;
-        
+
         if response.status() != StatusCode::OK {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from(FORBIDDEN_MSG).into_response()
+                Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
 
@@ -119,7 +123,7 @@ mod handlers {
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from(FORBIDDEN_MSG).into_response()
+                Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
 
@@ -222,8 +226,7 @@ mod handlers {
         let scopes = "im:read";
         let slack_auth_url = format!(
             "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}",
-            state.env_vars.slack_client_id, scopes, 
-            reqwest::Url::parse(&state.env_vars.slack_redirect_uri)?.to_string()
+            state.env_vars.slack_client_id, scopes, state.env_vars.slack_redirect_uri
         );
 
         Ok((
@@ -235,7 +238,6 @@ mod handlers {
         ))
     }
 
-
     pub(super) async fn auth_callback(
         State(state): State<RouterState>,
         Query(request): Query<AuthCallback>,
@@ -243,16 +245,15 @@ mod handlers {
         let code = request.code;
         let slack_auth_url = format!(
             "https://slack.com/api/oauth.v2.access?client_id={}&client_secret={}&code={}&redirect_uri={}",
-            state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, 
-            reqwest::Url::parse(&state.env_vars.slack_redirect_uri)?.to_string()
+            state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, state.env_vars.slack_redirect_uri
         );
         // request slack for access token
         let response = Client::new().get(slack_auth_url).send().await?;
-        
+
         if response.status() != StatusCode::OK {
             return Ok((
-                StatusCode::UNAUTHORIZED, 
-                Body::from(FORBIDDEN_MSG).into_response()
+                StatusCode::UNAUTHORIZED,
+                Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
 
@@ -263,15 +264,16 @@ mod handlers {
 
         let user_id = json_body["authed_user"]["id"].as_str().unwrap();
         let user = state.tummy.get_user_info(user_id).await?;
-        
+
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
                 StatusCode::UNAUTHORIZED,
-                Body::from(FORBIDDEN_MSG).into_response()
+                Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
 
-        let key: Hmac<Sha256> = Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
+        let key: Hmac<Sha256> =
+            Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
         let mut claims = BTreeMap::new();
         claims.insert("user_id", user_id);
         claims.insert("access_token", access_token);
@@ -286,12 +288,10 @@ mod handlers {
         ))
     }
 
-
     pub(super) async fn login() -> Result<(StatusCode, Response), AppError> {
         Ok((
             StatusCode::OK,
             Html(templates::LoginTemplate.render()?).into_response(),
         ))
     }
-
 }

@@ -43,10 +43,15 @@ impl From<&dbmodels::DBUser> for User {
             name: db_user.name.clone(),
             real_name: db_user.real_name.clone(),
             display_name: db_user.display_name.clone(),
-            image_url: db_user
-                .image_url
-                .clone()
-                .unwrap_or_else(|| "/assets/avatar.png".into()),
+            image_url: if let Some(url) = db_user.image_url.clone() {
+                if !url.is_empty() {
+                    url
+                } else {
+                    "/assets/avatar.png".into()
+                }
+            } else {
+                "/assets/avatar.png".into()
+            },
             email: db_user.email.clone(),
             deleted: db_user.deleted,
             is_bot: db_user.is_bot,
@@ -61,10 +66,15 @@ impl From<&dbmodels::DBMessageAndUser> for User {
             name: db_message_and_user.name.clone(),
             real_name: db_message_and_user.real_name.clone(),
             display_name: db_message_and_user.display_name.clone(),
-            image_url: db_message_and_user
-                .image_url
-                .clone()
-                .unwrap_or_else(|| "/assets/avatar.png".into()),
+            image_url: if let Some(url) = db_message_and_user.image_url.clone() {
+                if !url.is_empty() {
+                    url
+                } else {
+                    "/assets/avatar.png".into()
+                }
+            } else {
+                "/assets/avatar.png".into()
+            },
             email: db_message_and_user.email.clone(),
             deleted: db_message_and_user.deleted,
             is_bot: db_message_and_user.is_bot,
@@ -84,8 +94,8 @@ impl From<&dbmodels::DBChannel> for Channel {
         Channel {
             id: db_channel.id.clone(),
             name: db_channel.name.clone(),
-            topic: db_channel.topic.clone().unwrap_or_else(|| "".into()),
-            purpose: db_channel.purpose.clone().unwrap_or_else(|| "".into()),
+            topic: db_channel.topic.to_owned().unwrap_or("".into()),
+            purpose: db_channel.purpose.to_owned().unwrap_or("".into()),
         }
     }
 }

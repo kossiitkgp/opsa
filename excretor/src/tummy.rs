@@ -58,10 +58,7 @@ impl Tummy {
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
-        Ok(db_channels
-            .iter()
-            .map(Channel::from)
-            .collect())
+        Ok(db_channels.iter().map(Channel::from).collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
@@ -115,23 +112,14 @@ impl Tummy {
         };
         Ok(fetched_messages
             .iter()
-            .map(|e| {
-                (
-                    Message::from(e),
-                    User::from(e),
-                )
-            })
+            .map(|e| (Message::from(e), User::from(e)))
             .collect())
     }
 
     pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
-        let user = &query_as!(
-            DBUser,
-            "SELECT * FROM users WHERE id = $1",
-            user_id
-        )
-        .fetch_one(&self.tummy_conn_pool)
-        .await?;
+        let user = &query_as!(DBUser, "SELECT * FROM users WHERE id = $1", user_id)
+            .fetch_one(&self.tummy_conn_pool)
+            .await?;
         Ok(user.into())
     }
 }
