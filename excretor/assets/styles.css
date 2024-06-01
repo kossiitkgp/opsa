@@ -139,7 +139,6 @@ body {
 
 .message .message-inner-container .user-and-time .time {
     font-size: 0.8rem;
-    color: var(--text-secondary);
 }
 
 .message .message-inner-container span.mention {
