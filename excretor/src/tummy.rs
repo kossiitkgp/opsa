@@ -60,7 +60,7 @@ impl Tummy {
 
         Ok(db_channels
             .iter()
-            .map(From::from)
+            .map(Channel::from)
             .collect())
     }
 
