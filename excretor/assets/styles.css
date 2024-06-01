@@ -1,6 +1,6 @@
 :root {
-    --text-primary: #333;
-    --text-secondary: #555;
+    --text-primary: #222;
+    --text-secondary: #777;
 
     --background-primary: #fcfcfc;
     --sidebar-background: #f0f0f0;
@@ -129,6 +129,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: var(--text-secondary);
 }
 
 .message .message-inner-container .user-and-time .name {
