@@ -159,6 +159,11 @@ body {
     margin: 0.4rem 0;
 }
 
+.message .message-inner-container .message-content a {
+    color: #0e46a3;
+    text-decoration: none;
+}
+
 .message .message-inner-container .message-content ul {
     margin: 0 0 0.8rem 2rem;
 }
