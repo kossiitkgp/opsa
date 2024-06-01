@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/enescakir/emoji"
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/rs/zerolog/log"
@@ -289,13 +291,30 @@ func parseMessage(blocks []Block) string {
 		result += parseBlock(block) + "\n\n"
 	}
 
-	extensions := parser.CommonExtensions
+	extensions := parser.NoIntraEmphasis | parser.FencedCode | parser.Strikethrough
 	parser := parser.NewWithExtensions(extensions)
 	doc := parser.Parse([]byte(strings.TrimSpace(result)))
 
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-	opts := html.RendererOptions{Flags: htmlFlags}
+	opts := html.RendererOptions{Flags: htmlFlags, RenderNodeHook: renderHookHTML}
 	renderer := html.NewRenderer(opts)
 
 	return string(markdown.Render(doc, renderer))
+}
+
+func renderHookHTML(w io.Writer, node ast.Node, _ bool) (ast.WalkStatus, bool) {
+	htmlBlock, ok := node.(*ast.HTMLBlock)
+	if ok {
+		io.WriteString(w, "\n")
+		html.EscapeHTML(w, htmlBlock.Literal)
+		io.WriteString(w, "\n")
+		return ast.GoToNext, true
+	}
+
+	htmlSpan, ok := node.(*ast.HTMLSpan)
+	if ok {
+		html.EscapeHTML(w, htmlSpan.Literal)
+		return ast.GoToNext, true
+	}
+	return ast.GoToNext, false
 }
