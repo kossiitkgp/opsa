@@ -9,7 +9,7 @@ use std::time::Duration;
 use crate::{
     dbmodels::{DBChannel, DBMessageAndUser, DBUser},
     env::EnvVars,
-    models::{self, Channel, Message, User},
+    models::{Channel, Message, User},
 };
 
 #[derive(Clone)]
@@ -60,7 +60,7 @@ impl Tummy {
 
         Ok(db_channels
             .iter()
-            .map(models::Channel::from)
+            .map(From::from)
             .collect())
     }
 
@@ -72,7 +72,7 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::Channel::from(&channel))
+        Ok(From::from(&channel))
     }
 
     pub async fn fetch_msg_page(
@@ -117,8 +117,8 @@ impl Tummy {
             .iter()
             .map(|e| {
                 (
-                    models::Message::from(e),
-                    models::User::from(e),
+                    Message::from(e),
+                    User::from(e),
                 )
             })
             .collect())
@@ -132,6 +132,6 @@ impl Tummy {
         )
         .fetch_one(&self.tummy_conn_pool)
         .await?;
-        Ok(models::User::from(&user))
+        Ok(From::from(&user))
     }
 }
