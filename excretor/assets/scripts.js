@@ -1,12 +1,10 @@
-const DateTime = easepick.DateTime;
-
 htmx.onLoad(function () {
     const datePicker = document.getElementById("date-picker");
-    const picker = new easepick.create({
+    new easepick.create({
         element: datePicker,
         css: [
             "https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css",
-            "/assets/date-picker.css",
+            "/assets/date-picker.css", // custom css for date-picker needs to be put here because it uses Shadow DOM
         ],
         format: "DD MMMM YYYY",
         zIndex: 10,
@@ -21,9 +19,9 @@ htmx.onLoad(function () {
         setup(picker) {
             picker.on("select", (e) => {
                 const channelID = datePicker.getAttribute("data-channel-id");
-                const selectedDate = new DateTime(e.detail.date).format(
-                    "YYYY-MM-DD HH:mm:ss",
-                );
+                const selectedDate = new easepick.DateTime(
+                    e.detail.date,
+                ).format("YYYY-MM-DD HH:mm:ss");
                 htmx.ajax(
                     "GET",
                     `/messages/${channelID}?per_page=10&since=${selectedDate}`,
