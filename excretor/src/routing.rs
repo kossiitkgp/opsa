@@ -97,7 +97,7 @@ mod handlers {
         State(state): State<RouterState>,
         Query(auth_token): Query<AuthToken>,
     ) -> Result<(StatusCode, Response), AppError> {
-        if state.env_vars.slack_auth_enable == "true" {
+        if state.env_vars.slack_auth_enable {
             if auth_token.token.is_none() {
                 return Ok((
                     StatusCode::FOUND,
