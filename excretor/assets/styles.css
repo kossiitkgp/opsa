@@ -218,6 +218,7 @@ body {
 
 .message .message-inner-container .message-content .files a {
     padding: 0.3rem 0.8rem;
+    background-color: #eef7ff;
     border: 1px solid var(--border-color);
     border-radius: 8px;
 }
