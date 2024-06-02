@@ -304,9 +304,9 @@ func parseFiles(files []File) string {
 		if file.Mode != "hidden_by_limit" && file.Mode != "tombstone" {
 			fileAdded = true
 			if file.Mode == "hosted" && strings.HasPrefix(file.Mimetype, "image") {
-				result += fmt.Sprintf("<img src='%s' alt='%s'>", file.FileLink, file.Name)
+				result += fmt.Sprintf("<a class='image-link' href='%s' target='_blank'><img src='%s' alt='%s'></a>", file.FileLink, file.FileLink, file.Name)
 			} else {
-				result += fmt.Sprintf("<a href='%s' target='_blank'>%s</a>", file.FileLink, file.Name)
+				result += fmt.Sprintf("<a class='file-link' href='%s' target='_blank'>%s</a>", file.FileLink, file.Name)
 			}
 		}
 	}

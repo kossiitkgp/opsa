@@ -209,14 +209,14 @@ body {
     margin-top: 0.8rem;
 }
 
-.message .message-inner-container .message-content .files img {
+.message .message-inner-container .message-content .files .image-link img {
     max-width: 100%;
     max-height: 50vh;
     border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
-.message .message-inner-container .message-content .files a {
+.message .message-inner-container .message-content .files .file-link {
     padding: 0.3rem 0.8rem;
     background-color: #eef7ff;
     border: 1px solid var(--border-color);
