@@ -16,9 +16,8 @@ DATABASE_VOLUME := food
 
 default: build run
 
-.PHONY: help dev dev-stop build run stop digest run-digester check_clean clean
-
 ## help: Show this help message
+.PHONY: help
 help:
 	@echo "Usage: make [target]"
 	@sed -n 's/^##//p' $(CURRENT_MAKEFILE) | column -t -s ':' |  sed -e 's/^/ /'
@@ -26,6 +25,7 @@ help:
 	@echo "Running 'make' without a target is equivalent to running 'make build run'."
 
 ## dev: Run the excretor in development mode
+.PHONY: dev
 dev:
 	@echo "Starting tummy-dev with exposed port"
 	@$(DOCKER_COMPOSE) up tummy-dev -d --wait
@@ -39,6 +39,7 @@ dev:
 	@$(MAKEQ) dev-stop
 
 ## dev-stop: Stop the tummy-dev docker container
+.PHONY: dev-stop
 dev-stop:
 	@echo ""
 	@echo "Stopping tummy-dev docker container..."
@@ -46,22 +47,26 @@ dev-stop:
 	@$(DOCKER_COMPOSE) down tummy-dev
 
 ## build: Build the excretor and tummy docker images
+.PHONY: build
 build:
 	@echo "Building excretor and tummy docker images..."
 	@$(DOCKER_COMPOSE) build excretor tummy
 
 ## run: Run the excretor and tummy docker containers
+.PHONY: run
 run:
 	@echo "Running excretor and tummy docker containers..."
 	@$(DOCKER_COMPOSE) up excretor tummy -d
 
 ## stop: Stop the excretor and tummy docker containers
+.PHONY: stop
 stop:
 	@echo "Stopping excretor and tummy docker containers..."
 	@$(DOCKER_COMPOSE) stop excretor tummy
 	@$(DOCKER_COMPOSE) down excretor tummy
 
 ## digest: Run the digester container
+.PHONY: digest
 digest:
 ifeq (, $(FILE))
 	@echo "ERROR: No file path provided. Please specify the file path using 'make digest FILE=/path-to-file'"
@@ -75,6 +80,7 @@ endif
 # In case the digester gracefully shuts down
 	@$(MAKEQ) dev-stop
 
+.PHONY: check_clean
 check_clean:
 	@echo "This will remove the database volume. This action is irreversible."
 	@echo -n "Are you sure you want to proceed? [y/N] " && read ans; \
@@ -84,6 +90,7 @@ check_clean:
     fi
 
 ## clean: Remove the database volume
+.PHONY: clean
 clean: check_clean
 	@docker volume rm $(notdir $(PROJECT_DIR))_$(DATABASE_VOLUME)
 	@echo "Database volume removed."
@@ -92,5 +99,5 @@ clean: check_clean
 ifneq (, $(MAKECMDGOALS))
 	@echo "Target '$(MAKECMDGOALS)' not found."
 	@echo ""
-	@$(MAKEQ) --no-print-directory help
+	@$(MAKEQ) help
 endif
