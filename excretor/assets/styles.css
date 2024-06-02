@@ -206,11 +206,17 @@ body {
 }
 
 .message .message-inner-container .message-content .files {
-    margin-top: 0.5rem;
+    margin-top: 0.8rem;
 }
 
 .message .message-inner-container .message-content .files img {
     max-width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.message .message-inner-container .message-content .files a {
+    padding: 0.3rem 0.8rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
 }
