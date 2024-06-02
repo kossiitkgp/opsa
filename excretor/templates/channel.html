@@ -4,6 +4,8 @@
         <h1>#{{ channel.name }}</h1>
         <p><b>Topic</b>: {{ channel.topic }}</p>
         <p><b>Purpose</b>: {{ channel.purpose }}</p>
+        <label for="date-picker">Messages Since</label>
+        <input id="date-picker" data-channel-id="{{ channel.id }}" />
     </div>
     <div class="message-container">
         <div
