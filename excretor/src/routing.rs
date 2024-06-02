@@ -97,9 +97,7 @@ mod handlers {
         State(state): State<RouterState>,
         Query(auth_token): Query<AuthToken>,
     ) -> Result<(StatusCode, Response), AppError> {
-        let ask_auth = false; // set to true to prompt for authentication
-
-        if ask_auth {
+        if state.env_vars.slack_auth_enable == "true" {
             if auth_token.token.is_none() {
                 return Ok((
                     StatusCode::FOUND,
@@ -110,7 +108,7 @@ mod handlers {
                 ));
             }
 
-            let is_verified = _verify_token(auth_token.token.as_ref(), &state).await?;
+            let is_verified = verify_token(auth_token.token.as_ref(), &state).await?;
             if !is_verified {
                 return Ok((
                     StatusCode::UNAUTHORIZED,
@@ -317,10 +315,7 @@ mod handlers {
         ))
     }
 
-    pub async fn _verify_token(
-        token: Option<&String>,
-        state: &RouterState,
-    ) -> Result<bool, AppError> {
+    async fn verify_token(token: Option<&String>, state: &RouterState) -> Result<bool, AppError> {
         // verify the jwt token and accessing slack auth test api
         let key: Hmac<Sha256> =
             Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
