@@ -54,6 +54,7 @@ type Message struct {
 	ParentUserID    string  `json:"parent_user_id"`
 	SubType         string  `json:"subtype"`
 	Blocks          []Block `json:"blocks"`
+	Files           []File  `json:"files"`
 }
 
 const (
@@ -422,8 +423,8 @@ func main() {
 				case "channel_leave":
 					message.Text = "<em>Left the channel</em>"
 				default:
-					if len(message.Blocks) > 0 {
-						text := parseMessage(message.Blocks)
+					if len(message.Blocks) > 0 || len(message.Files) > 0 {
+						text := parseMessage(message.Blocks, message.Files)
 						if text != "" {
 							message.Text = text
 						}

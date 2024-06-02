@@ -47,6 +47,13 @@ type TextStyle struct {
 	Code   bool `json:"code"`
 }
 
+type File struct {
+	Mode     string `json:"mode"`
+	Name     string `json:"name"`
+	Mimetype string `json:"mimetype"`
+	FileLink string `json:"url_private"`
+}
+
 const (
 	MENTION_START = "<mention>"
 	MENTION_END   = "</mention>"
@@ -289,7 +296,30 @@ func parseBlock(block Block) string {
 	return result
 }
 
-func parseMessage(blocks []Block) string {
+func parseFiles(files []File) string {
+	result := "<div class=\"files\">"
+
+	fileAdded := false
+	for _, file := range files {
+		if file.Mode != "hidden_by_limit" && file.Mode != "tombstone" {
+			fileAdded = true
+			if file.Mode == "hosted" && strings.HasPrefix(file.Mimetype, "image") {
+				result += fmt.Sprintf("<a class='image-link' href='%s' target='_blank'><img src='%s' alt='%s'></a>", file.FileLink, file.FileLink, file.Name)
+			} else {
+				result += fmt.Sprintf("<a class='file-link' href='%s' target='_blank'>%s</a>", file.FileLink, file.Name)
+			}
+		}
+	}
+
+	result += "</div>"
+
+	if fileAdded {
+		return result
+	}
+	return ""
+}
+
+func parseMessage(blocks []Block, files []File) string {
 	result := ""
 
 	for _, block := range blocks {
@@ -304,7 +334,10 @@ func parseMessage(blocks []Block) string {
 	opts := html.RendererOptions{Flags: htmlFlags, RenderNodeHook: renderHookHTML}
 	renderer := html.NewRenderer(opts)
 
-	return string(markdown.Render(doc, renderer))
+	renderedBlocks := string(markdown.Render(doc, renderer))
+	renderedFiles := parseFiles(files)
+
+	return renderedBlocks + renderedFiles
 }
 
 func renderHookHTML(w io.Writer, node ast.Node, _ bool) (ast.WalkStatus, bool) {
