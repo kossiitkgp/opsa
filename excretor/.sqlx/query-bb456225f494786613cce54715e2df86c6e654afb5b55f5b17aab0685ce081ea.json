@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT messages.*, users.*, c.cnt\n                FROM messages\n                INNER JOIN users ON users.id = messages.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id\n                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''\n                ORDER BY ts ASC LIMIT $3\n                ",
+  "query": "\n                SELECT messages.*, users.*, c.cnt\n                FROM messages\n                INNER JOIN users ON users.id = messages.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id\n                WHERE channel_id = $1 AND ts > $2 AND ts > $3 AND messages.parent_user_id = ''\n                ORDER BY ts ASC LIMIT $4\n                ",
   "describe": {
     "columns": [
       {
@@ -83,6 +83,7 @@
       "Left": [
         "Text",
         "Timestamp",
+        "Timestamp",
         "Int8"
       ]
     },
@@ -104,5 +105,5 @@
       null
     ]
   },
-  "hash": "b73e9bfeb0428ba6cd50022701bd806b4f5e6a22d870ecada396cfc5398ec3f2"
+  "hash": "bb456225f494786613cce54715e2df86c6e654afb5b55f5b17aab0685ce081ea"
 }

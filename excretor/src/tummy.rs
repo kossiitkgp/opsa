@@ -101,6 +101,7 @@ impl Tummy {
         channel_id: &str,
         last_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
+        since_timestamp: &chrono::NaiveDateTime,
     ) -> Result<Vec<Message>, sqlx::Error> {
         let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
             query_as!(
@@ -115,10 +116,11 @@ impl Tummy {
                     WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
                 ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
-                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''
-                ORDER BY ts ASC LIMIT $3
+                WHERE channel_id = $1 AND ts > $2 AND ts > $3 AND messages.parent_user_id = ''
+                ORDER BY ts ASC LIMIT $4
                 "#,
                 channel_id,
+                since_timestamp,
                 timestamp,
                 *msgs_per_page as i64
             )
@@ -137,10 +139,11 @@ impl Tummy {
                     WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
                 ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
-                WHERE channel_id = $1 AND messages.parent_user_id = ''
-                ORDER BY ts ASC LIMIT $2
+                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''
+                ORDER BY ts ASC LIMIT $3
 	            ",
                 channel_id,
+                since_timestamp,
                 *msgs_per_page as i64
             )
             .fetch_all(&self.tummy_conn_pool)

@@ -2,8 +2,16 @@
 <div id="channel-content">
     <div class="channel-header">
         <h1>#{{ channel.name }}</h1>
-        <p><b>Topic</b>: {{ channel.topic }}</p>
-        <p><b>Purpose</b>: {{ channel.purpose }}</p>
+        <p><b>Topic:</b> {{ channel.topic }}</p>
+        <p><b>Purpose:</b> {{ channel.purpose }}</p>
+        <div class="date-since">
+            <label for="date-picker">Showing messages since:</label>
+            <input
+                id="date-picker"
+                placeholder="01 January 1970"
+                data-channel-id="{{ channel.id }}"
+            />
+        </div>
     </div>
     <div class="message-container">
         <div

@@ -73,6 +73,11 @@ mod handlers {
         per_page: u32,
     }
 
+    #[derive(Deserialize)]
+    pub struct DateQuery {
+        since: Option<String>
+    }
+
     // basic handler that responds with a static string
     pub(super) async fn root(
         State(state): State<RouterState>,
@@ -101,6 +106,7 @@ mod handlers {
         State(state): State<RouterState>,
         Path(channel_id): Path<String>,
         pagination: Query<Pagination>,
+        date_query: Query<DateQuery>,
     ) -> Result<(StatusCode, Response), AppError> {
         let messages = state
             .tummy
@@ -111,6 +117,11 @@ mod handlers {
                     .as_ref()
                     .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts)),
                 &pagination.per_page,
+                &date_query
+                    .since
+                    .as_ref()
+                    .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts))
+                    .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH),
             )
             .await?;
 
