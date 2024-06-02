@@ -1,5 +1,5 @@
 use crate::{
-    dbmodels::{DBChannel, DBParentMessage, DBReply},
+    dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
     tummy::SlackDateTime,
 };
 use sqlx::types::chrono;
@@ -91,6 +91,29 @@ pub struct User {
     pub email: String,
     pub deleted: bool,
     pub is_bot: bool,
+}
+
+impl From<DBUser> for User {
+    fn from(item: DBUser) -> Self {
+        User {
+            id: item.id,
+            name: item.name,
+            real_name: item.real_name,
+            display_name: item.display_name,
+            image_url: if let Some(url) = item.image_url {
+                if !url.is_empty() {
+                    url
+                } else {
+                    "/assets/avatar.png".into()
+                }
+            } else {
+                "/assets/avatar.png".into()
+            },
+            email: item.email,
+            deleted: item.deleted,
+            is_bot: item.is_bot,
+        }
+    }
 }
 
 pub struct Channel {

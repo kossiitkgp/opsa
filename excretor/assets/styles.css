@@ -297,3 +297,44 @@ body {
     background-color: #999;
     border-radius: 3px;
 }
+
+#login {
+    height: 100vh;
+    width: 100%;
+}
+
+#login .login-container {
+    background-color: var(--sidebar-background);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    width: 25%;
+    height: 30%;
+    margin: 0 auto;
+}
+
+#login h1 {
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+#login .login-container .button {
+    align-items: center;
+    color: #fff;
+    background-color: #4a154b;
+    border: 0;
+    border-radius: 4px;
+    display: inline-flex;
+    font-family: Lato, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    height: 56px;
+    justify-content: center;
+    text-decoration: none;
+    width: 276px;
+}

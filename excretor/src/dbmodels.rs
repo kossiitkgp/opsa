@@ -44,3 +44,15 @@ pub struct DBChannel {
     pub topic: Option<String>,
     pub purpose: Option<String>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct DBUser {
+    pub id: String,
+    pub name: String,
+    pub real_name: String,
+    pub display_name: String,
+    pub image_url: Option<String>,
+    pub email: String,
+    pub deleted: bool,
+    pub is_bot: bool,
+}

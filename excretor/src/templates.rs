@@ -49,3 +49,7 @@ pub struct ThreadTemplate {
 #[derive(Template)]
 #[template(path = "fallback_avatar.html")]
 pub struct FallbackAvatarTemplate;
+
+#[derive(Template)]
+#[template(path = "login.html")]
+pub struct LoginTemplate;

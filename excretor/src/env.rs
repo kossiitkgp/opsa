@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 #[derive(Parser, Clone)]
+#[clap(name = "tummy")]
 pub struct EnvVars {
     #[arg(env)]
     pub tummy_username: String,
@@ -10,6 +11,16 @@ pub struct EnvVars {
     pub tummy_password: String,
     #[arg(env)]
     pub tummy_port: String,
+    #[arg(env)]
+    pub slack_client_id: String,
+    #[arg(env)]
+    pub slack_client_secret: String,
+    #[arg(env)]
+    pub slack_signing_secret: String,
+    #[arg(env)]
+    pub slack_redirect_uri: String,
+    #[arg(env, default_value = "false", action = clap::ArgAction::Set)]
+    pub slack_auth_enable: bool,
     #[arg(env, default_value = "postgres://localhost/tummy")]
     pub database_url: String,
     #[arg(env, default_value = "assets/")]
