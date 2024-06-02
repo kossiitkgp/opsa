@@ -9,7 +9,7 @@ endif
 CURRENT_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 PROJECT_DIR := $(shell dirname $(realpath $(CURRENT_MAKEFILE)))
 
-ENVS := $(shell grep -v '^\#' .env)
+ENVS := $(shell grep -v '^#' .env)
 EXCRETOR_DEV_ENVS := $(ENVS) RUST_BACKTRACE=1
 
 DATABASE_VOLUME := food
