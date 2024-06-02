@@ -205,6 +205,16 @@ body {
     color: var(--text-primary);
 }
 
+.message .message-inner-container .message-content .files {
+    margin-top: 0.5rem;
+}
+
+.message .message-inner-container .message-content .files img {
+    max-width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
 .replies {
     font-size: 14px;
     color: #9b3922;
