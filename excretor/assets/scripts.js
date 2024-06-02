@@ -30,6 +30,7 @@ htmx.onLoad(function () {
                         swap: "innerHTML",
                     },
                 );
+                htmx.remove(htmx.find(".thread-container")); // Remove any opened thread
             });
         },
     });
