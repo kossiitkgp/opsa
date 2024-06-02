@@ -1,0 +1,39 @@
+:host {
+    --color-fg-primary: orangered;
+    --color-fg-accent: orangered;
+}
+
+.container.show {
+    margin-top: 0.2rem;
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.container.show .calendar .days-grid .day {
+    border-radius: 3px;
+}
+
+.container.show .calendar .days-grid .day.selected {
+    font-weight: bold;
+    border: 1px solid var(--color-fg-primary);
+    background-color: rgba(255, 220, 154, 0.4);
+    color: var(--color-fg-primary);
+}
+
+.container.amp-plugin.show .calendars .calendar .header .month-name--select {
+    border-radius: 5px;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--sidebar-background);
+    color: var(--text-secondary);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.container.amp-plugin.show
+    .calendars
+    .calendar
+    .header
+    .month-name--select.month-name--dropdown {
+    font-weight: unset;
+}

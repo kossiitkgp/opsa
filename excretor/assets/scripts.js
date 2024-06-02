@@ -6,6 +6,7 @@ htmx.onLoad(function () {
         element: datePicker,
         css: [
             "https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css",
+            "/assets/date-picker.css",
         ],
         format: "DD MMMM YYYY",
         zIndex: 10,
