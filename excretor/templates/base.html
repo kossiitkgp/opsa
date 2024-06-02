@@ -6,10 +6,13 @@
             src="https://unpkg.com/htmx.org@1.9.6"
             crossorigin="anonymous"
         ></script>
+        <script src="https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.umd.min.js"></script>
         <link rel="stylesheet" href="/assets/styles.css" />
         {% block head %}{% endblock %}
     </head>
     <body>
         <div id="app">{% block content %}{% endblock %}</div>
     </body>
+    <script src="/assets/scripts.js"></script>
+    {% block scripts %}{% endblock %}
 </html>
