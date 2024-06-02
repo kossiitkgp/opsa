@@ -7,6 +7,7 @@ htmx.onLoad(function () {
         css: [
             "https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css",
         ],
+        format: "DD MMMM YYYY",
         zIndex: 10,
         plugins: ["AmpPlugin"],
         AmpPlugin: {
