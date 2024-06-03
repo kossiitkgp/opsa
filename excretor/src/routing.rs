@@ -321,7 +321,7 @@ mod handlers {
             .path("/")
             .secure(true)
             .http_only(true)
-            .max_age(Duration::days(15));
+            .max_age(Duration::days(state.env_vars.keep_logged_in_for_days));
 
         Ok((
             StatusCode::PERMANENT_REDIRECT,

@@ -21,6 +21,8 @@ pub struct EnvVars {
     pub slack_redirect_uri: String,
     #[arg(env, default_value = "false", action = clap::ArgAction::Set)]
     pub slack_auth_enable: bool,
+    #[arg(env, default_value = "30")]
+    pub keep_logged_in_for_days: i64,
     #[arg(env, default_value = "postgres://localhost/tummy")]
     pub database_url: String,
     #[arg(env, default_value = "assets/")]
