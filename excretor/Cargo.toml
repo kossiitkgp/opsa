@@ -7,7 +7,7 @@ name = "excretor"
 path = "src/main.rs"
 
 [dependencies]
-axum = "0.7.5"
+axum = { version = "0.7.5", features = ["macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.68"
 tokio = { version = "1.0", features = ["full"] }
@@ -28,3 +28,5 @@ reqwest = "0.12.4"
 jwt = "0.16.0"
 hmac = "0.12.1"
 sha2 = "0.10.8"
+cookie = {version = "0.18.1", features = ["secure"]}
+axum-extra = {version = "0.9.3", features = ["cookie"]}

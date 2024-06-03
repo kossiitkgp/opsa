@@ -34,6 +34,8 @@ mod handlers {
         http::StatusCode,
         response::{Html, Response},
     };
+    use axum_extra::extract::cookie::{CookieJar, Cookie};
+    use cookie::time::Duration;
     use hmac::{Hmac, Mac};
     use jwt::{SignWithKey, VerifyWithKey};
     use reqwest::Client;
@@ -91,33 +93,28 @@ mod handlers {
         code: String,
     }
 
-    #[derive(Deserialize)]
-    pub struct AuthToken {
-        token: Option<String>,
-    }
-
     const FORBIDDEN_MSG: &str = "Mortals are forbidden from accessing the site";
 
     pub(super) async fn root(
         State(state): State<RouterState>,
-        Query(auth_token): Query<AuthToken>,
+        jar: CookieJar,
     ) -> Result<(StatusCode, Response), AppError> {
         if state.env_vars.slack_auth_enable {
-            if auth_token.token.is_none() {
+            if let Some(token) = jar.get("token").map(|cookie| cookie.value().to_owned()) {
+                let is_verified = verify_token(&token, &state).await?;
+                if !is_verified {
+                    return Ok((
+                        StatusCode::UNAUTHORIZED,
+                        Body::from(FORBIDDEN_MSG).into_response(),
+                    ));
+                }
+            } else {
                 return Ok((
                     StatusCode::FOUND,
                     Response::builder()
                         .header("Location", "/login")
                         .body(Body::empty())
                         .unwrap(),
-                ));
-            }
-
-            let is_verified = verify_token(auth_token.token.as_ref(), &state).await?;
-            if !is_verified {
-                return Ok((
-                    StatusCode::UNAUTHORIZED,
-                    Body::from(FORBIDDEN_MSG).into_response(),
                 ));
             }
         }
@@ -279,7 +276,8 @@ mod handlers {
     pub(super) async fn auth_callback(
         State(state): State<RouterState>,
         Query(request): Query<AuthCallback>,
-    ) -> Result<(StatusCode, Response), AppError> {
+        jar: CookieJar,
+    ) -> Result<(StatusCode, CookieJar, Response), AppError> {
         let code = request.code;
         let slack_auth_url = format!(
             "https://slack.com/api/oauth.v2.access?client_id={}&client_secret={}&code={}&redirect_uri={}",
@@ -291,6 +289,7 @@ mod handlers {
         if response.status() != StatusCode::OK {
             return Ok((
                 StatusCode::UNAUTHORIZED,
+                jar,
                 Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
@@ -306,6 +305,7 @@ mod handlers {
         if user.id.is_empty() || user.is_bot || user.deleted {
             return Ok((
                 StatusCode::UNAUTHORIZED,
+                jar,
                 Body::from(FORBIDDEN_MSG).into_response(),
             ));
         }
@@ -317,20 +317,27 @@ mod handlers {
         claims.insert("access_token", access_token);
         let token_str = claims.sign_with_key(&key)?;
 
+        let token_cookie = Cookie::build(("token", token_str))
+            .path("/")
+            .secure(true)
+            .http_only(true)
+            .max_age(Duration::days(15));
+
         Ok((
             StatusCode::PERMANENT_REDIRECT,
+            jar.add(token_cookie),
             Response::builder()
-                .header("Location", "/?token=".to_owned() + &token_str)
+                .header("Location", "/".to_owned())
                 .body(Body::empty())
                 .unwrap(),
         ))
     }
 
-    async fn verify_token(token: Option<&String>, state: &RouterState) -> Result<bool, AppError> {
+    async fn verify_token(token: &String, state: &RouterState) -> Result<bool, AppError> {
         // verify the jwt token and accessing slack auth test api
         let key: Hmac<Sha256> =
             Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();
-        let claims: BTreeMap<String, String> = token.unwrap().verify_with_key(&key)?;
+        let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;
         let user_id = claims.get("user_id").unwrap();
         let access_token = claims.get("access_token").unwrap();
 
