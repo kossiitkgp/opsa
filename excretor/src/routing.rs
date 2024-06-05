@@ -106,7 +106,7 @@ mod handlers {
     use crate::templates;
     use crate::tummy::SlackDateTime;
     use askama::Template;
-    use axum::extract::{Json, Path, Query, State};
+    use axum::extract::{Form, Path, Query, State};
     use axum::response::IntoResponse;
     use axum::{
         body::Body,
@@ -181,7 +181,7 @@ mod handlers {
 
     pub(super) async fn search(
         State(state): State<RouterState>,
-        Json(payload): Json<SearchQuery>,
+        Form(payload): Form<SearchQuery>,
     ) -> Result<(StatusCode, Response), AppError> {
         let messages = state
             .tummy

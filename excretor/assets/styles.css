@@ -10,7 +10,7 @@
     --sidebar-width: 15vw;
     --channel-header-height: 150px;
     --avatar-size: 30px;
-
+    --search-container-width: 20vw;
     --thread-container-width: 30vw;
 }
 
@@ -77,7 +77,7 @@ body {
 
 .channel-content {
     height: 100%;
-    width: calc(100% - var(--sidebar-width) - var(--thread-container-width));
+    width: calc(100% - var(--sidebar-width) - var(--thread-container-width) - var(--search-container-width));
     flex-grow: 1;
 }
 
@@ -339,4 +339,13 @@ body {
     justify-content: center;
     text-decoration: none;
     width: 276px;
+}
+
+.search-results {
+    width: var(--search-container-width);
+    height: 100vh;
+    padding: 0.5rem 1.5rem;
+    border-right: 1px solid var(--border-color);
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
 }
