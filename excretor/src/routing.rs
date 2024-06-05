@@ -5,10 +5,11 @@ use axum::{
     http::StatusCode,
     middleware::{self, Next},
     response::Response,
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use axum_extra::extract::cookie::CookieJar;
+use handlers::search;
 use hmac::{Hmac, Mac};
 use jwt::VerifyWithKey;
 use reqwest::Client;
@@ -87,6 +88,7 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/replies", get(handlers::get_replies))
+        .route("/search", post(search))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             verify_token_middleware,
@@ -104,7 +106,7 @@ mod handlers {
     use crate::templates;
     use crate::tummy::SlackDateTime;
     use askama::Template;
-    use axum::extract::{Path, Query, State};
+    use axum::extract::{Json, Path, Query, State};
     use axum::response::IntoResponse;
     use axum::{
         body::Body,
@@ -168,6 +170,39 @@ mod handlers {
     #[derive(Deserialize)]
     pub struct AuthCallback {
         code: String,
+    }
+
+    #[derive(Deserialize)]
+    pub struct SearchQuery {
+        query: String,
+        channel_id: Option<String>,
+        user_id: Option<String>,
+    }
+
+    pub(super) async fn search(
+        State(state): State<RouterState>,
+        Json(payload): Json<SearchQuery>,
+    ) -> Result<(StatusCode, Response), AppError> {
+        let messages = state
+            .tummy
+            .search_msg_text(
+                &payload.query,
+                payload.channel_id.as_deref(),
+                payload.user_id.as_deref(),
+                5,
+            )
+            .await?;
+        Ok((
+            StatusCode::OK,
+            Html(
+                templates::SearchResultsTemplate {
+                    messages,
+                    query: payload.query,
+                }
+                .render()?,
+            )
+            .into_response(),
+        ))
     }
 
     pub(super) async fn root(

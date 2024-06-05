@@ -53,3 +53,10 @@ pub struct FallbackAvatarTemplate;
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate;
+
+#[derive(Template)]
+#[template(path = "search_results.html")]
+pub struct SearchResultsTemplate {
+    pub messages: Vec<Message>,
+    pub query: String,
+}

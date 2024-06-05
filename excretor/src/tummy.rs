@@ -1,6 +1,5 @@
 use sqlx::{
     postgres::PgPoolOptions,
-    query,
     query_as,
     types::chrono::{self, NaiveDateTime},
     PgPool,
@@ -34,7 +33,6 @@ impl SlackDateTime for NaiveDateTime {
 }
 
 impl Tummy {
-
     pub async fn init(env_vars: &EnvVars) -> Self {
         let tummy_conn_string = format!(
             "postgres://{}:{}@{}:{}/{}",
@@ -45,7 +43,6 @@ impl Tummy {
             env_vars.tummy_db
         );
 
-    
         let tummy_conn_pool = PgPoolOptions::new()
             .max_connections(5)
             .acquire_timeout(Duration::from_secs(3))
@@ -58,7 +55,7 @@ impl Tummy {
             .await
             .expect("Could not run tummy migrations.");
 
-        Self { tummy_conn_pool }        
+        Self { tummy_conn_pool }
     }
 
     pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
@@ -83,24 +80,75 @@ impl Tummy {
     pub async fn search_msg_text(
         &self,
         query_text: &str,
+        channel_id: Option<&str>,
+        user_id: Option<&str>,
         limit: i64,
     ) -> color_eyre::Result<Vec<Message>> {
-        let messages = query_as!(
-            DBReply,
-            r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN(
-                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM users
-            ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-            ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
-            LIMIT $2
-            "#, query_text, limit
-        )
-        .fetch_all(&self.tummy_conn_pool)
-        .await?;
+        let messages = match (channel_id, user_id) {
+            (Some(channel_id), Some(user_id)) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE channel_id = $3 AND user_id = $4
+                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id, user_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (Some(channel_id), None) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE channel_id = $3
+                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (None, Some(user_id)) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE user_id = $3
+                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                LIMIT $2
+                "#, query_text, limit, user_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (None, None) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                LIMIT $2
+                "#, query_text, limit
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+        };
         Ok(messages.into_iter().map(models::Message::from).collect())
     }
 
