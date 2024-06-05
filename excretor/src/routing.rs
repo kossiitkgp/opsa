@@ -1,5 +1,13 @@
 use crate::{env::EnvVars, tummy::Tummy};
-use axum::{body::Body, extract::{Request, State}, http::StatusCode, middleware::{self, Next}, response::Response, routing::get, Router};
+use axum::{
+    body::Body,
+    extract::{Request, State},
+    http::StatusCode,
+    middleware::{self, Next},
+    response::Response,
+    routing::get,
+    Router,
+};
 use axum_extra::extract::cookie::CookieJar;
 use hmac::{Hmac, Mac};
 use jwt::VerifyWithKey;
@@ -36,22 +44,27 @@ async fn verify_token(token: &String, state: &RouterState) -> Result<bool, handl
     Ok(true)
 }
 
-async fn verify_token_middleware(State(state): State<RouterState>, jar: CookieJar, request: Request, next: Next) -> Result<Response, handlers::AppError> {
+async fn verify_token_middleware(
+    State(state): State<RouterState>,
+    jar: CookieJar,
+    request: Request,
+    next: Next,
+) -> Result<Response, handlers::AppError> {
     if state.env_vars.slack_auth_enable {
         if let Some(token) = jar.get("token").map(|cookie| cookie.value().to_owned()) {
             let is_verified = verify_token(&token, &state).await?;
             if !is_verified {
                 return Ok(Response::builder()
-                            .status(StatusCode::UNAUTHORIZED)
-                            .body(Body::from(FORBIDDEN_MSG))
-                            .unwrap());
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(Body::from(FORBIDDEN_MSG))
+                    .unwrap());
             }
         } else {
             return Ok(Response::builder()
-                        .status(StatusCode::TEMPORARY_REDIRECT)
-                        .header("Location", "/login")
-                        .body(Body::empty())
-                        .unwrap());
+                .status(StatusCode::TEMPORARY_REDIRECT)
+                .header("Location", "/login")
+                .body(Body::empty())
+                .unwrap());
         }
     }
 
@@ -74,7 +87,10 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/replies", get(handlers::get_replies))
-        .route_layer(middleware::from_fn_with_state(state.clone(), verify_token_middleware))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            verify_token_middleware,
+        ))
         .route("/auth", get(handlers::auth))
         .route("/auth/callback", get(handlers::auth_callback))
         .route("/login", get(handlers::login))
@@ -95,7 +111,7 @@ mod handlers {
         http::StatusCode,
         response::{Html, Response},
     };
-    use axum_extra::extract::cookie::{CookieJar, Cookie};
+    use axum_extra::extract::cookie::{Cookie, CookieJar};
     use cookie::time::Duration;
     use hmac::{Hmac, Mac};
     use jwt::SignWithKey;
@@ -146,7 +162,7 @@ mod handlers {
 
     #[derive(Deserialize)]
     pub struct DateQuery {
-        since: Option<String>
+        since: Option<String>,
     }
 
     #[derive(Deserialize)]
@@ -157,7 +173,6 @@ mod handlers {
     pub(super) async fn root(
         State(state): State<RouterState>,
     ) -> Result<(StatusCode, Response), AppError> {
-
         let channels = state.tummy.get_all_channels().await?;
 
         Ok((
