@@ -229,10 +229,25 @@ mod handlers {
         Path(channel): Path<String>,
     ) -> Result<(StatusCode, Response), AppError> {
         let channel = state.tummy.get_channel_info(&channel).await?;
+        let messages = state
+            .tummy
+            .fetch_msg_page(&channel.id, &None, &10, &chrono::NaiveDateTime::UNIX_EPOCH)
+            .await?;
+
+        let channel_id = channel.id.clone();
 
         Ok((
             StatusCode::OK,
-            Html(templates::ChannelTemplate { channel }.render()?).into_response(),
+            Html(templates::ChannelTemplate { 
+                channel, 
+                last_msg_timestamp: if let Some(last_msg) = messages.last() {
+                    last_msg.timestamp.to_string()
+                } else {
+                    chrono::NaiveDateTime::UNIX_EPOCH.to_string()
+                },
+                messages, 
+                channel_id,
+            }.render()?).into_response(),
         ))
     }
 

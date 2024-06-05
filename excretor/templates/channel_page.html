@@ -30,7 +30,8 @@
             {% endif %}
         </div>
     </div>
-    {% endfor %} {% if self::generate_trigger(messages) %}
+    {% endfor %} 
+    {% if self::generate_trigger(messages) %}
     <div
         hx-get="/messages/{{ channel_id }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10"
         hx-trigger="intersect once"

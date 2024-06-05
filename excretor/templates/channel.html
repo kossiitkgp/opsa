@@ -14,14 +14,7 @@
         </div>
     </div>
     <div class="message-container">
-        <div
-            hx-get="/messages/{{ channel.id }}?per_page=10"
-            hx-target="this"
-            hx-swap="outerHTML"
-            hx-trigger="load"
-        >
-            Loading...
-        </div>
+        {% include "channel_page.html" %}
     </div>
 </div>
 
@@ -29,7 +22,6 @@
 <!-- hx-get has this empty data url so that i donot have to install hyperscript -->
 <div
     hx-trigger="load"
-    hx-get="data:text/html,"
     hx-swap="delete"
     hx-target=".thread-container"
 ></div>

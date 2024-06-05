@@ -23,6 +23,9 @@ pub struct ErrTemplate {
 #[template(path = "channel.html")]
 pub struct ChannelTemplate {
     pub channel: Channel,
+    pub messages: Vec<Message>,
+    pub last_msg_timestamp: String,
+    pub channel_id: String,
 }
 
 fn generate_trigger(messages: &[Message]) -> bool {
