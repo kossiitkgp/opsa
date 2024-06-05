@@ -96,7 +96,7 @@ impl Tummy {
                     FROM users
                 ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
                 WHERE channel_id = $3 AND user_id = $4
-                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
                 LIMIT $2
                 "#, query_text, limit, channel_id, user_id
             ).fetch_all(&self.tummy_conn_pool)
@@ -112,7 +112,7 @@ impl Tummy {
                     FROM users
                 ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
                 WHERE channel_id = $3
-                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
                 LIMIT $2
                 "#, query_text, limit, channel_id
             ).fetch_all(&self.tummy_conn_pool)
@@ -128,7 +128,7 @@ impl Tummy {
                     FROM users
                 ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
                 WHERE user_id = $3
-                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
                 LIMIT $2
                 "#, query_text, limit, user_id
             ).fetch_all(&self.tummy_conn_pool)
@@ -143,7 +143,7 @@ impl Tummy {
                     SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
                     FROM users
                 ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
                 LIMIT $2
                 "#, query_text, limit
             ).fetch_all(&self.tummy_conn_pool)
