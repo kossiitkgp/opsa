@@ -58,6 +58,11 @@ services:
             - TUMMY_HOST=tummy
             - STATIC_ASSETS_DIR=${STATIC_ASSETS_DIR}
             - SQLX_OFFLINE=true
+            - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+            - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+            - SLACK_REDIRECT_URI=${SLACK_REDIRECT_URI}
+            - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+            - SLACK_AUTH_ENABLE=false
         ports:
             - "${EXCRETOR_PORT}:${EXCRETOR_PORT}"
         networks:
