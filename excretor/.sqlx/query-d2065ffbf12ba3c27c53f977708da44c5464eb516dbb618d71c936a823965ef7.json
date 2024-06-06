@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels",
+  "query": "SELECT * FROM channels ORDER BY name ASC",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       true
     ]
   },
-  "hash": "1f7b1262e41e91b421b62ae4610dfec7a83a930ac1b9eb99b871a0dd2ba3f383"
+  "hash": "d2065ffbf12ba3c27c53f977708da44c5464eb516dbb618d71c936a823965ef7"
 }
