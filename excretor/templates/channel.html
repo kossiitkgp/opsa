@@ -1,5 +1,5 @@
 <!-- templates/channel.html -->
-<div id="channel-content">
+<div class="channel-container">
     <div class="channel-header">
         <h1>#{{ channel.name }}</h1>
         <p><b>Topic:</b> {{ channel.topic }}</p>
@@ -13,15 +13,23 @@
             />
         </div>
     </div>
-    <div class="message-container">
-        {% include "channel_page.html" %}
-    </div>
+    <div class="message-container">{% include "channel_page.html" %}</div>
 </div>
 
 <!-- remove opened threads if any-->
 <!-- hx-get has this empty data url so that i donot have to install hyperscript -->
 <div
     hx-trigger="load"
+    hx-get="data:text/html,"
     hx-swap="delete"
     hx-target=".thread-container"
+></div>
+
+<!-- remove opened search results if any-->
+<!-- hx-get has this empty data url so that i donot have to install hyperscript -->
+<div
+    hx-trigger="load"
+    hx-get="data:text/html,"
+    hx-swap="delete"
+    hx-target=".search-results-container"
 ></div>

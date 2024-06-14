@@ -1,18 +1,13 @@
 <div class="search-bar">
-    <h3> 
-        Search Contacts 
-        <span class="htmx-indicator"> 
-        <img src="/img/bars.svg"/> Searching... 
-        </span> 
-    </h3>
-    <input class="form-control" type="search" 
-            name="query" placeholder="Begin Typing To Search Messages..." 
-            hx-post="/search" 
-            hx-trigger="input changed delay:500ms, search" 
-            hx-target=".search-results" 
-            hx-swap="innerHTML"
-            hx-indicator=".htmx-indicator">
-    
-    <div class="search-results">
-    </div>
+    <input
+        class="search-bar-input"
+        type="search"
+        name="query"
+        placeholder="Begin Typing To Search Messages..."
+        hx-post="/search"
+        hx-trigger="click from:.search-bar-button"
+        hx-target=".search-results"
+        hx-swap="innerHTML"
+    />
+    <button class="search-bar-button" type="submit">Search</button>
 </div>

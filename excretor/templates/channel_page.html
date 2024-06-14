@@ -23,15 +23,14 @@
                 hx-get="/replies?ts={{ message.timestamp }}&user_id={{ message.user_id }}&channel_id={{ channel_id }}"
                 hx-trigger="click"
                 hx-swap="innerHTML"
-                hx-target=".thread-content"
+                hx-target=".thread-view"
             >
                 <span>{{ message.thread_count }} replies -></span>
             </div>
             {% endif %}
         </div>
     </div>
-    {% endfor %} 
-    {% if self::generate_trigger(messages) %}
+    {% endfor %} {% if self::generate_trigger(messages) %}
     <div
         hx-get="/messages/{{ channel_id }}?last_msg_timestamp={{ last_msg_timestamp }}&per_page=10"
         hx-trigger="intersect once"

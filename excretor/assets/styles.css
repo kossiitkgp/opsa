@@ -75,9 +75,9 @@ body {
     background-color: var(--sidebar-hover);
 }
 
-.channel-content {
+.message-view {
     height: 100%;
-    width: calc(100% - var(--sidebar-width) - var(--thread-container-width) - var(--search-container-width));
+    width: calc(100% - var(--sidebar-width) - var(--thread-container-width));
     flex-grow: 1;
 }
 
@@ -341,9 +341,37 @@ body {
     width: 276px;
 }
 
+.search-bar {
+    height: 3rem;
+    border-bottom: 1px solid var(--border-color);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.2rem 0.5rem;
+    gap: 0.5rem;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--sidebar-background);
+    border-radius: 3px;
+}
+
+.search-bar button {
+    background-color: #4a154b;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+}
+
 .search-results {
-    width: var(--search-container-width);
     height: 100vh;
+    width: 100%;
     padding: 0.5rem 1.5rem;
     border-right: 1px solid var(--border-color);
     overflow-y: scroll;
