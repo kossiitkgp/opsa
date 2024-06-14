@@ -11,6 +11,7 @@
     --channel-header-height: 150px;
     --avatar-size: 30px;
     --search-container-width: 20vw;
+    --search-bar-height: 3rem;
     --thread-container-width: 30vw;
 }
 
@@ -342,7 +343,7 @@ body {
 }
 
 .search-bar {
-    height: 3rem;
+    height: var(--search-bar-height);
     border-bottom: 1px solid var(--border-color);
 
     display: flex;
@@ -370,7 +371,7 @@ body {
 }
 
 .search-results {
-    height: 100vh;
+    height: calc(100vh - var(--search-bar-height));
     width: 100%;
     padding: 0.5rem 1.5rem;
     border-right: 1px solid var(--border-color);
