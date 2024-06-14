@@ -30,6 +30,9 @@ dev:
 	@echo "Starting tummy-dev with exposed port"
 	@$(DOCKER_COMPOSE) up tummy-dev -d --wait
 	@echo ""
+	@echo "Running migrations..."
+	@cargo sqlx migrate run
+	@echo ""
 	@echo "Running sqlx prepare..."
 	@cd excretor && cargo sqlx prepare && cd ..
 	@echo ""
