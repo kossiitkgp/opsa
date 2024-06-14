@@ -10,7 +10,8 @@
     --sidebar-width: 15vw;
     --channel-header-height: 150px;
     --avatar-size: 30px;
-
+    --search-container-width: 20vw;
+    --search-bar-height: 3rem;
     --thread-container-width: 30vw;
 }
 
@@ -75,7 +76,7 @@ body {
     background-color: var(--sidebar-hover);
 }
 
-.channel-content {
+.message-view {
     height: 100%;
     width: calc(100% - var(--sidebar-width) - var(--thread-container-width));
     flex-grow: 1;
@@ -339,4 +340,41 @@ body {
     justify-content: center;
     text-decoration: none;
     width: 276px;
+}
+
+.search-bar {
+    height: var(--search-bar-height);
+    border-bottom: 1px solid var(--border-color);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.2rem 0.5rem;
+    gap: 0.5rem;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--sidebar-background);
+    border-radius: 3px;
+}
+
+.search-bar button {
+    background-color: #4a154b;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+}
+
+.search-results {
+    height: calc(100vh - var(--search-bar-height));
+    width: 100%;
+    padding: 0.5rem 1.5rem;
+    border-right: 1px solid var(--border-color);
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
 }

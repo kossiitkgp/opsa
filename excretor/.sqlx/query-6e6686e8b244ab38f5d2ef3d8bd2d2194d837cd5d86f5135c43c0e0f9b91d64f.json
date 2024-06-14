@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT messages.*, users.*, c.cnt\n                FROM messages\n                INNER JOIN users ON users.id = messages.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id\n                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''\n                ORDER BY ts ASC LIMIT $3\n\t            ",
+  "query": "\n                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,\n                id, name, real_name, display_name, image_url, email, deleted, is_bot\n                FROM messages\n                INNER JOIN(\n                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot\n                    FROM users\n                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id\n                WHERE channel_id = $3\n                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC\n                LIMIT $2\n                ",
   "describe": {
     "columns": [
       {
@@ -15,13 +15,13 @@
       },
       {
         "ordinal": 2,
-        "name": "ts",
-        "type_info": "Timestamp"
+        "name": "msg_text",
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "msg_text",
-        "type_info": "Text"
+        "name": "ts",
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 4,
@@ -55,35 +55,30 @@
       },
       {
         "ordinal": 10,
-        "name": "email",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 11,
-        "name": "deleted",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 12,
-        "name": "is_bot",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 13,
         "name": "image_url",
         "type_info": "Text"
       },
       {
-        "ordinal": 14,
-        "name": "cnt",
-        "type_info": "Int8"
+        "ordinal": 11,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "deleted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_bot",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
       "Left": [
         "Text",
-        "Timestamp",
-        "Int8"
+        "Int8",
+        "Text"
       ]
     },
     "nullable": [
@@ -97,12 +92,11 @@
       false,
       false,
       false,
-      false,
-      false,
-      false,
       true,
-      null
+      false,
+      false,
+      false
     ]
   },
-  "hash": "cb9ea0438f351972efb74e8e4436bca24f638630261f460ce2eab2b8fd7fd930"
+  "hash": "6e6686e8b244ab38f5d2ef3d8bd2d2194d837cd5d86f5135c43c0e0f9b91d64f"
 }

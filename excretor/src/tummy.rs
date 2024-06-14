@@ -43,14 +43,19 @@ impl Tummy {
             env_vars.tummy_db
         );
 
-        Self {
-            tummy_conn_pool: PgPoolOptions::new()
-                .max_connections(5)
-                .acquire_timeout(Duration::from_secs(3))
-                .connect(&tummy_conn_string)
-                .await
-                .expect("Could not connect to tummy."),
-        }
+        let tummy_conn_pool = PgPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(Duration::from_secs(3))
+            .connect(&tummy_conn_string)
+            .await
+            .expect("Could not connect to tummy.");
+
+        sqlx::migrate!("../migrations")
+            .run(&tummy_conn_pool)
+            .await
+            .expect("Could not run tummy migrations.");
+
+        Self { tummy_conn_pool }
     }
 
     pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
@@ -74,6 +79,81 @@ impl Tummy {
         Ok(channel.into())
     }
 
+    pub async fn search_msg_text(
+        &self,
+        query_text: &str,
+        channel_id: Option<&str>,
+        user_id: Option<&str>,
+        limit: i64,
+    ) -> color_eyre::Result<Vec<Message>> {
+        let messages = match (channel_id, user_id) {
+            (Some(channel_id), Some(user_id)) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE channel_id = $3 AND user_id = $4
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id, user_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (Some(channel_id), None) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE channel_id = $3
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (None, Some(user_id)) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                WHERE user_id = $3
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
+                LIMIT $2
+                "#, query_text, limit, user_id
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+            (None, None) => query_as!(
+                DBReply,
+                r#"
+                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+                id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM messages
+                INNER JOIN(
+                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                    FROM users
+                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
+                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
+                LIMIT $2
+                "#, query_text, limit
+            ).fetch_all(&self.tummy_conn_pool)
+            .await?,
+        };
+        Ok(messages.into_iter().map(models::Message::from).collect())
+    }
+
     pub async fn fetch_replies(
         &self,
         message_ts: &str,
@@ -83,7 +163,8 @@ impl Tummy {
         let replies = query_as!(
             DBReply,
             r#"
-            SELECT messages.*, users.*
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id, 
+            id, name, real_name, display_name, image_url, email, deleted, is_bot
             FROM messages
             INNER JOIN users ON users.id = messages.user_id
             WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
@@ -109,16 +190,17 @@ impl Tummy {
             query_as!(
                 DBParentMessage,
                 r#"
-                SELECT messages.*, users.*, c.cnt
-                FROM messages
-                INNER JOIN users ON users.id = messages.user_id
+                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id, 
+                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
+                FROM messages as m
+                INNER JOIN users ON users.id = m.user_id
                 LEFT JOIN (
                     SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
                     FROM messages
                     WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
-                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
-                WHERE channel_id = $1 AND ts > $2 AND ts > $3 AND messages.parent_user_id = ''
+                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+                WHERE m.channel_id = $1 AND m.ts > $2 AND m.ts > $3 AND m.parent_user_id = ''
                 ORDER BY ts ASC LIMIT $4
                 "#,
                 channel_id,
@@ -132,17 +214,18 @@ impl Tummy {
             query_as!(
                 DBParentMessage,
                 "
-                SELECT messages.*, users.*, c.cnt
-                FROM messages
-                INNER JOIN users ON users.id = messages.user_id
+                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id, 
+                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
+                FROM messages as m
+                INNER JOIN users ON users.id = m.user_id
                 LEFT JOIN (
                     SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
                     FROM messages
                     WHERE channel_id = $1
                     GROUP BY join_ts, parent_user_id
-                ) as c ON messages.ts = c.join_ts AND messages.user_id = c.parent_user_id
-                WHERE channel_id = $1 AND ts > $2 AND messages.parent_user_id = ''
-                ORDER BY ts ASC LIMIT $3
+                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+                WHERE m.channel_id = $1 AND m.ts > $2 AND m.parent_user_id = ''
+                ORDER BY m.ts ASC LIMIT $3
 	            ",
                 channel_id,
                 since_timestamp,

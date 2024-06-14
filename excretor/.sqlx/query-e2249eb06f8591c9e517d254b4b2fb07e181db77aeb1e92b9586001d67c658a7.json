@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT messages.*, users.*\n            FROM messages\n            INNER JOIN users ON users.id = messages.user_id\n            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3\n            ORDER BY ts ASC\n            ",
+  "query": "\n            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id, \n            id, name, real_name, display_name, image_url, email, deleted, is_bot\n            FROM messages\n            INNER JOIN users ON users.id = messages.user_id\n            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3\n            ORDER BY ts ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -15,13 +15,13 @@
       },
       {
         "ordinal": 2,
-        "name": "ts",
-        "type_info": "Timestamp"
+        "name": "msg_text",
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "msg_text",
-        "type_info": "Text"
+        "name": "ts",
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 4,
@@ -55,23 +55,23 @@
       },
       {
         "ordinal": 10,
-        "name": "email",
+        "name": "image_url",
         "type_info": "Text"
       },
       {
         "ordinal": 11,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
         "name": "deleted",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "is_bot",
         "type_info": "Bool"
-      },
-      {
-        "ordinal": 13,
-        "name": "image_url",
-        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -92,11 +92,11 @@
       false,
       false,
       false,
+      true,
       false,
       false,
-      false,
-      true
+      false
     ]
   },
-  "hash": "a95034ca832b9986c7b1a72a60bb9909457a95bf98c4677fdb79a292c03437e2"
+  "hash": "e2249eb06f8591c9e517d254b4b2fb07e181db77aeb1e92b9586001d67c658a7"
 }
