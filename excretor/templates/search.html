@@ -3,9 +3,9 @@
         class="search-bar-input"
         type="search"
         name="query"
-        placeholder="Begin Typing To Search Messages..."
+        placeholder="Type your query and press Enter to search"
         hx-post="/search"
-        hx-trigger="click from:.search-bar-button"
+        hx-trigger="click from:.search-bar-button, keyup[keyCode==13] from:body"
         hx-target=".search-results"
         hx-swap="innerHTML"
     />
