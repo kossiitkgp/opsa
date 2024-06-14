@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,\n                id, name, real_name, display_name, image_url, email, deleted, is_bot\n                FROM messages\n                INNER JOIN(\n                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot\n                    FROM users\n                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id\n                WHERE channel_id = $3\n                ORDER BY ts_rank(textsearchable_index_col, websearch_to_tsquery($1)) DESC\n                LIMIT $2\n                ",
+  "query": "\n                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,\n                id, name, real_name, display_name, image_url, email, deleted, is_bot\n                FROM messages\n                INNER JOIN(\n                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot\n                    FROM users\n                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id\n                WHERE user_id = $3\n                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC\n                LIMIT $2\n                ",
   "describe": {
     "columns": [
       {
@@ -98,5 +98,5 @@
       false
     ]
   },
-  "hash": "41b232ad755b9303da94354f266e85e75d7647bf5bec2f20683802a5643b32a6"
+  "hash": "aae7351e059edb47de5dcc6cb3bf86dca4c5f8fbec2cc900e4785a5522b3ab50"
 }
