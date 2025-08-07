@@ -1,0 +1,213 @@
+import { useState, useEffect, useRef } from 'react';
+import type { Channel, Message as MessageType, MessageThread, ViewState } from "../types";
+import { API_ENDPOINTS } from '../api';
+
+export const useChatData = (appTitle: string) => {
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+    const [view, setView] = useState<ViewState>('channels');
+    const [channels, setChannels] = useState<Channel[]>([]);
+    const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+    const [messages, setMessages] = useState<MessageType[]>([]);
+    const [oldestMessageTimestamp, setOldestMessageTimestamp] = useState<string | null>(null);
+    const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
+    const [searchResults, setSearchResults] = useState<MessageType[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [allMessagesLoaded, setAllMessagesLoaded] = useState<boolean>(false);
+
+    const messageListRef = useRef<HTMLDivElement>(null);
+    const previousScrollHeightRef = useRef<number | null>(null);
+
+    // Initial fetch of channels on component mount
+    useEffect(() => {
+        const fetchChannels = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch(API_ENDPOINTS.channels);
+                if (!response.ok) throw new Error('Failed to fetch channels.');
+                const data = await response.json();
+                if (data.channels) {
+                    setChannels(data.channels);
+                    if (data.channels.length > 0) {
+                        setSelectedChannel(data.channels[0]);
+                    }
+                }
+            } catch (err: any) {
+                setError(err.message);
+                setView('error');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchChannels();
+    }, []);
+
+    // Fetch messages for the selected channel whenever it changes
+    useEffect(() => {
+        if (!selectedChannel) return;
+        setMessages([]);
+        setOldestMessageTimestamp(null);
+        setAllMessagesLoaded(false);
+
+        const fetchChannelAndMessages = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch(API_ENDPOINTS.channelAndMessages(selectedChannel.id));
+                if (!response.ok) throw new Error('Failed to fetch channel data and messages.');
+                const data = await response.json();
+                if (data.channel && data.messages) {
+                    setSelectedChannel(data.channel);
+                    setMessages(data.messages);
+                    if (data.messages.length > 0) {
+                        setOldestMessageTimestamp(data.before_msg_timestamp);
+                    } else {
+                        setAllMessagesLoaded(true);
+                    }
+                }
+            } catch (err: any) {
+                setError(err.message);
+                setView('error');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchChannelAndMessages();
+    }, [selectedChannel?.id]);
+
+    // Handle scroll position after new messages are loaded
+    useEffect(() => {
+        if (!messageListRef.current || messages.length === 0) return;
+        if (previousScrollHeightRef.current !== null) {
+            setTimeout(() => {
+                const newScrollHeight = messageListRef.current!.scrollHeight;
+                const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
+                messageListRef.current!.scrollTop += heightDifference;
+                previousScrollHeightRef.current = null;
+            }, 0);
+        } else {
+            if (oldestMessageTimestamp === null) {
+                messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+            }
+        }
+    }, [messages, oldestMessageTimestamp]);
+
+    // Function to handle fetching older messages
+    const fetchOlderMessages = async (channelId: string, timestamp: string | null) => {
+        if (isLoading || (timestamp && allMessagesLoaded)) return;
+        setIsLoading(true);
+        try {
+            if (messageListRef.current) {
+                previousScrollHeightRef.current = messageListRef.current.scrollHeight;
+            }
+            const response = await fetch(API_ENDPOINTS.messages(channelId, timestamp));
+            if (!response.ok) throw new Error(`Failed to fetch messages. Status: ${response.status}`);
+            const data = await response.json();
+            if (data.messages) {
+                const newMessages = data.messages;
+                if (newMessages.length > 0) {
+                    setMessages((prevMessages) => [...newMessages, ...prevMessages]);
+                    setOldestMessageTimestamp(data.before_msg_timestamp);
+                } else {
+                    setAllMessagesLoaded(true);
+                }
+            } else {
+                throw new Error('API response for messages is not in the expected format.');
+            }
+        } catch (err: any) {
+            setError(err.message);
+            setView('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Event handlers and utility functions
+    const handleLogin = () => setIsLoggedIn(true);
+
+    const handleSearch = async (query: string) => {
+        if (!query) return;
+        setIsLoading(true);
+        setView('search');
+        try {
+            const formData = new URLSearchParams();
+            formData.append('query', query);
+            const response = await fetch(API_ENDPOINTS.search, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
+            });
+            if (!response.ok) throw new Error('Search failed.');
+            const data = await response.json();
+            setSearchResults(data.messages || []);
+        } catch (err: any) {
+            setError(err.message);
+            setView('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleChannelClick = (channel: Channel) => {
+        setView('channels');
+        setSelectedChannel(channel);
+        setSelectedThread(null);
+        setSearchResults([]);
+    };
+
+    const handleRepliesClick = async (message: MessageType) => {
+        setIsLoading(true);
+        setView('thread');
+        try {
+            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, selectedChannel!.id));
+            if (!response.ok) throw new Error('Failed to fetch replies.');
+            const data = await response.json();
+            setSelectedThread({ parentMessage: message, replies: data.messages });
+        } catch (err: any) {
+            setError(err.message);
+            setView('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const closeThread = () => {
+        setSelectedThread(null);
+        setView('channels');
+    };
+
+    const closeSearchResults = () => {
+        setSearchResults([]);
+        setView('channels');
+    };
+
+    const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop } = e.currentTarget;
+        if (scrollTop === 0 && !isLoading && !allMessagesLoaded) {
+            await fetchOlderMessages(selectedChannel!.id, oldestMessageTimestamp);
+        }
+    };
+
+    return {
+        isLoggedIn,
+        handleLogin,
+        view,
+        setView,
+        channels,
+        selectedChannel,
+        messages,
+        selectedThread,
+        searchResults,
+        error,
+        isLoading,
+        appTitle,
+        allMessagesLoaded,
+        messageListRef,
+        handleSearch,
+        handleChannelClick,
+        handleRepliesClick,
+        closeThread,
+        closeSearchResults,
+        handleScroll,
+    };
+};

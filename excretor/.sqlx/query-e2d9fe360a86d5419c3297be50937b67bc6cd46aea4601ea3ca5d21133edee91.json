@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,\n            id, name, real_name, display_name, image_url, email, deleted, is_bot\n            FROM messages\n            INNER JOIN(\n                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot\n                FROM users\n            ) as u ON u.id = messages.user_id\n            WHERE similarity(msg_text, $1) > $4 AND channel_id = $3\n            ORDER BY similarity(msg_text, $1) DESC\n            LIMIT $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "msg_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 4,
+        "name": "thread_ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "parent_user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "real_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "image_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "deleted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_bot",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Text",
+        "Float4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e2d9fe360a86d5419c3297be50937b67bc6cd46aea4601ea3ca5d21133edee91"
+}
