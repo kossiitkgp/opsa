@@ -1,4 +1,3 @@
-pub mod handlers;
 pub mod channels;
 pub mod messages;
 pub mod auth;

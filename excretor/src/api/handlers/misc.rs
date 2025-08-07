@@ -1,20 +1,11 @@
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{Html, Response};
+use axum::response::{Response};
 use tokio_util::io::ReaderStream;
 use crate::api::routes::RouterState;
 use crate::api::errors::AppError;
 use axum::response::IntoResponse;
-
-
-pub async fn fallback_avatar() -> Result<(StatusCode, Response), AppError> {
-    todo!();
-    // Ok((
-    //     StatusCode::OK,
-    //     Html(templates::FallbackAvatarTemplate.render()?).into_response(),
-    // ))
-}
 
 pub async fn assets(
     State(state): State<RouterState>,

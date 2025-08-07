@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{IntoResponse, Response};
 use axum_extra::extract::CookieJar;
 use cookie::Cookie;
 use cookie::time::Duration;
@@ -96,12 +96,4 @@ pub async fn auth_callback(
             .body(Body::empty())
             .unwrap(),
     ))
-}
-
-pub async fn login() -> Result<(StatusCode, Response), AppError> {
-    todo!();
-    // Ok((
-    //     StatusCode::OK,
-    //     Html(templates::LoginTemplate.render()?).into_response(),
-    // ))
 }

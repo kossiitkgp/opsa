@@ -15,7 +15,6 @@ export default defineConfig({
         changeOrigin: true,
         // Optional: Rewrite the path to remove the '/api' prefix
         // For example, '/api/hello' becomes '/hello' on the backend
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

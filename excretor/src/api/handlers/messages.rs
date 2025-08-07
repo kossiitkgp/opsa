@@ -2,12 +2,17 @@ use crate::db::tummy::SlackDateTime;
 use crate::api::errors::AppError;
 use crate::api::routes::RouterState;
 use axum::response::IntoResponse;
-use crate::templates;
-use askama::Template;
 use axum::extract::{Form, Path, Query, State};
-use axum::{http::StatusCode, response::{Html, Response}, Json};
+use axum::{http::StatusCode, response::Response, Json};
 use serde::Deserialize;
-use crate::api::handlers::handlers::ReplyRequest;
+use crate::api::models;
+
+#[derive(Deserialize)]
+pub struct ReplyRequest {
+    pub channel_id: String,
+    pub ts: String,
+    pub user_id: String,
+}
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
@@ -40,16 +45,15 @@ pub async fn search(
             5,
         )
         .await?;
-    todo!();
-    // Ok((
-    //     StatusCode::OK,
-    //     Json(
-    //         templates::SearchResultsTemplate {
-    //             messages,
-    //             query: payload.query,
-    //         }
-    //     ).into_response()
-    // ))
+    Ok((
+        StatusCode::OK,
+        Json(
+            models::SearchResultsResponse {
+                messages,
+                query: payload.query,
+            }
+        ).into_response()
+    ))
 }
 
 pub async fn get_messages(
@@ -79,19 +83,16 @@ pub async fn get_messages(
         .last()
         .map(|message| message.timestamp)
         .unwrap_or(sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc());
-    todo!();
-    // Ok((
-    //     StatusCode::OK,
-    //     Html(
-    //         templates::ChannelPageTemplate {
-    //             messages,
-    //             last_msg_timestamp: new_last_msg_timestamp.to_string(),
-    //             channel_id,
-    //         }
-    //             .render()?,
-    //     )
-    //         .into_response(),
-    // ))
+    Ok((
+        StatusCode::OK,
+        Json(
+            models::MessagesResponse {
+                messages,
+                last_msg_timestamp: new_last_msg_timestamp.to_string(),
+                channel_id,
+            }
+        ).into_response(),
+    ))
 }
 
 pub async fn get_replies(
@@ -106,19 +107,15 @@ pub async fn get_replies(
             &message_data.user_id,
         )
         .await?;
-    todo!();
-    // Ok((
-    //     StatusCode::OK,
-    //     Html(
-    //         templates::ThreadTemplate {
-    //             messages,
-    //             parent_ts: message_data.ts.clone(),
-    //             channel_id: message_data.channel_id.clone(),
-    //             parent_user_id: message_data.user_id.clone(),
-    //         }
-    //             .render()
-    //             .unwrap(),
-    //     )
-    //         .into_response(),
-    // ))
+    Ok((
+        StatusCode::OK,
+        Json(
+            models::ThreadResponse {
+                messages,
+                parent_ts: message_data.ts.clone(),
+                channel_id: message_data.channel_id.clone(),
+                parent_user_id: message_data.user_id.clone(),
+            }
+        ).into_response()
+    ))
 }

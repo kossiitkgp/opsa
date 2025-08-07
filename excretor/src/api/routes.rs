@@ -90,7 +90,6 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/channels", get(handlers::get_channels))
         .route("/channels/:channel_name", get(handlers::load_channel))
         .route("/messages/:channel_id", get(handlers::get_messages))
-        .route("/fallback-avatar", get(handlers::fallback_avatar))
         .route("/replies", get(handlers::get_replies))
         .route("/search", post(handlers::search));
 
@@ -104,7 +103,6 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         ))
         .route("/auth", get(handlers::auth))
         .route("/auth/callback", get(handlers::auth_callback))
-        .route("/login", get(handlers::login))
         .route("/assets/*file", get(handlers::assets))
         .with_state(state)
 }

@@ -3,7 +3,6 @@ mod env;
 mod db;
 mod api;
 mod types;
-mod templates;
 
 use tracing::info;
 
