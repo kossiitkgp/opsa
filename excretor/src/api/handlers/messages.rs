@@ -46,7 +46,8 @@ pub struct Pagination {
 #[derive(Deserialize)]
 pub struct DateQuery {
     /// Optional ISO date string to fetch messages since this date.
-    since: Option<String>,
+    after: Option<String>,
+    before: Option<String>,
 }
 
 /// Searches messages by text, channel, and user.
@@ -98,9 +99,9 @@ pub async fn get_messages(
     State(state): State<RouterState>,
     Path(channel_id): Path<String>,
     pagination: Query<Pagination>,
-    date_query: Query<DateQuery>,
+    _date_query: Query<DateQuery>,
 ) -> Result<(StatusCode, Response), AppError> {
-    let mut messages = state
+    let messages = state
         .tummy
         .fetch_msg_page(
             &channel_id,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Channel, Message as MessageType, MessageThread, ViewState } from "../types";
+import type { Channel, Message as MessageType, MessageThread, SearchResult, ViewState } from "../types";
 import { API_ENDPOINTS } from '../api';
 
 export const useChatData = (appTitle: string) => {
@@ -10,7 +10,7 @@ export const useChatData = (appTitle: string) => {
     const [messages, setMessages] = useState<MessageType[]>([]);
     const [oldestMessageTimestamp, setOldestMessageTimestamp] = useState<string | null>(null);
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
-    const [searchResults, setSearchResults] = useState<MessageType[]>([]);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState<boolean>(false);
@@ -138,8 +138,10 @@ export const useChatData = (appTitle: string) => {
                 body: formData,
             });
             if (!response.ok) throw new Error('Search failed.');
+
             const data = await response.json();
             setSearchResults(data.messages || []);
+
         } catch (err: any) {
             setError(err.message);
             setView('error');
@@ -157,9 +159,10 @@ export const useChatData = (appTitle: string) => {
 
     const handleRepliesClick = async (message: MessageType) => {
         setIsLoading(true);
-        setView('thread');
+        // *** FIX: Do NOT change the main view state when opening a thread. ***
+        // setView('thread'); // This was the problem.
         try {
-            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, selectedChannel!.id));
+            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, message.channel_id));
             if (!response.ok) throw new Error('Failed to fetch replies.');
             const data = await response.json();
             setSelectedThread({ parentMessage: message, replies: data.messages });
@@ -173,7 +176,8 @@ export const useChatData = (appTitle: string) => {
 
     const closeThread = () => {
         setSelectedThread(null);
-        setView('channels');
+        // *** FIX: Do NOT reset the view. This preserves the main content area. ***
+        // setView('channels'); // This was also a problem.
     };
 
     const closeSearchResults = () => {

@@ -1,6 +1,6 @@
-use super::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser};
+use super::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser, DBSearchResult};
 use crate::env::EnvVars;
-use crate::types::{Channel, Message, User};
+use crate::types::{Channel, Message, User, SearchResult};
 use sqlx::{
     postgres::PgPoolOptions,
     query_as,
@@ -70,8 +70,8 @@ impl Tummy {
             "SELECT * FROM channels WHERE id = $1",
             channel_id
         )
-        .fetch_one(&self.tummy_conn_pool)
-        .await?;
+            .fetch_one(&self.tummy_conn_pool)
+            .await?;
         Ok(channel.into())
     }
 
@@ -82,74 +82,114 @@ impl Tummy {
         user_id: Option<&str>,
         limit: i64,
         similarity_threshold: f32,
-    ) -> color_eyre::Result<Vec<Message>> {
+    ) -> color_eyre::Result<Vec<SearchResult>> {
         let messages = match (channel_id, user_id) {
             (Some(channel_id), Some(user_id)) => query_as!(
-            DBReply,
-            r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN(
-                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM users
-            ) as u ON u.id = messages.user_id
-            WHERE similarity(msg_text, $1) > $5 AND channel_id = $3 AND user_id = $4
-            ORDER BY similarity(msg_text, $1) DESC
-            LIMIT $2
-            "#, query_text, limit, channel_id, user_id, similarity_threshold
-        ).fetch_all(&self.tummy_conn_pool)
-                .await?,
+                DBSearchResult,
+                r#"
+                SELECT
+                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
+                    c.cnt,
+                    parent_m.msg_text as "parent_msg_text?",
+                    parent_u.name as "parent_name?",
+                    parent_u.real_name as "parent_real_name?",
+                    parent_u.display_name as "parent_display_name?",
+                    parent_u.image_url as "parent_image_url?",
+                    parent_u.email as "parent_email?",
+                    parent_u.deleted as "parent_deleted?",
+                    parent_u.is_bot as "parent_is_bot?"
+                FROM messages AS m
+                INNER JOIN users AS u ON u.id = m.user_id
+                INNER JOIN channels AS channel ON channel.id = m.channel_id
+                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
+                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
+                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
+                WHERE similarity(m.msg_text, $1) > $5 AND m.channel_id = $3 AND m.user_id = $4
+                ORDER BY similarity(m.msg_text, $1) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id, user_id, similarity_threshold
+            ).fetch_all(&self.tummy_conn_pool).await?,
             (Some(channel_id), None) => query_as!(
-            DBReply,
-            r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN(
-                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM users
-            ) as u ON u.id = messages.user_id
-            WHERE similarity(msg_text, $1) > $4 AND channel_id = $3
-            ORDER BY similarity(msg_text, $1) DESC
-            LIMIT $2
-            "#, query_text, limit, channel_id, similarity_threshold
-        ).fetch_all(&self.tummy_conn_pool)
-                .await?,
+                DBSearchResult,
+                r#"
+                SELECT
+                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
+                    c.cnt,
+                    parent_m.msg_text as "parent_msg_text?",
+                    parent_u.name as "parent_name?",
+                    parent_u.real_name as "parent_real_name?",
+                    parent_u.display_name as "parent_display_name?",
+                    parent_u.image_url as "parent_image_url?",
+                    parent_u.email as "parent_email?",
+                    parent_u.deleted as "parent_deleted?",
+                    parent_u.is_bot as "parent_is_bot?"
+                FROM messages AS m
+                INNER JOIN users AS u ON u.id = m.user_id
+                INNER JOIN channels AS channel ON channel.id = m.channel_id
+                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
+                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
+                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
+                WHERE similarity(m.msg_text, $1) > $4 AND m.channel_id = $3
+                ORDER BY similarity(m.msg_text, $1) DESC
+                LIMIT $2
+                "#, query_text, limit, channel_id, similarity_threshold
+            ).fetch_all(&self.tummy_conn_pool).await?,
             (None, Some(user_id)) => query_as!(
-            DBReply,
-            r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN(
-                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM users
-            ) as u ON u.id = messages.user_id
-            WHERE similarity(msg_text, $1) > $4 AND user_id = $3
-            ORDER BY similarity(msg_text, $1) DESC
-            LIMIT $2
-            "#, query_text, limit, user_id, similarity_threshold
-        ).fetch_all(&self.tummy_conn_pool)
-                .await?,
+                DBSearchResult,
+                r#"
+                SELECT
+                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
+                    c.cnt,
+                    parent_m.msg_text as "parent_msg_text?",
+                    parent_u.name as "parent_name?",
+                    parent_u.real_name as "parent_real_name?",
+                    parent_u.display_name as "parent_display_name?",
+                    parent_u.image_url as "parent_image_url?",
+                    parent_u.email as "parent_email?",
+                    parent_u.deleted as "parent_deleted?",
+                    parent_u.is_bot as "parent_is_bot?"
+                FROM messages AS m
+                INNER JOIN users AS u ON u.id = m.user_id
+                INNER JOIN channels AS channel ON channel.id = m.channel_id
+                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
+                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
+                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
+                WHERE similarity(m.msg_text, $1) > $4 AND m.user_id = $3
+                ORDER BY similarity(m.msg_text, $1) DESC
+                LIMIT $2
+                "#, query_text, limit, user_id, similarity_threshold
+            ).fetch_all(&self.tummy_conn_pool).await?,
             (None, None) => query_as!(
-            DBReply,
-            r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN(
-                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM users
-            ) as u ON u.id = messages.user_id
-            WHERE similarity(msg_text, $1) > $3
-            ORDER BY similarity(msg_text, $1) DESC
-            LIMIT $2
-            "#, query_text, limit, similarity_threshold
-        ).fetch_all(&self.tummy_conn_pool)
-                .await?,
+                DBSearchResult,
+                r#"
+                SELECT
+                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
+                    c.cnt,
+                    parent_m.msg_text as "parent_msg_text?",
+                    parent_u.name as "parent_name?",
+                    parent_u.real_name as "parent_real_name?",
+                    parent_u.display_name as "parent_display_name?",
+                    parent_u.image_url as "parent_image_url?",
+                    parent_u.email as "parent_email?",
+                    parent_u.deleted as "parent_deleted?",
+                    parent_u.is_bot as "parent_is_bot?"
+                FROM messages AS m
+                INNER JOIN users AS u ON u.id = m.user_id
+                INNER JOIN channels AS channel ON channel.id = m.channel_id
+                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
+                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
+                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
+                WHERE similarity(m.msg_text, $1) > $3
+                ORDER BY similarity(m.msg_text, $1) DESC
+                LIMIT $2
+                "#, query_text, limit, similarity_threshold
+            ).fetch_all(&self.tummy_conn_pool).await?,
         };
-        Ok(messages.into_iter().map(Message::from).collect())
+        Ok(messages.into_iter().map(SearchResult::from).collect())
     }
 
     pub async fn fetch_replies(
@@ -161,19 +201,37 @@ impl Tummy {
         let replies = query_as!(
             DBReply,
             r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot
-            FROM messages
-            INNER JOIN users ON users.id = messages.user_id
-            WHERE thread_ts = $1 AND channel_id = $2 AND parent_user_id = $3
-            ORDER BY ts ASC
+            SELECT
+                m.channel_id,
+                c.name AS channel_name,
+                m.user_id,
+                m.msg_text,
+                m.ts,
+                m.thread_ts,
+                m.parent_user_id,
+                u.id,
+                u.name,
+                u.real_name,
+                u.display_name,
+                u.image_url,
+                u.email,
+                u.deleted,
+                u.is_bot
+            FROM
+                messages AS m
+            INNER JOIN users AS u ON u.id = m.user_id
+            INNER JOIN channels AS c ON c.id = m.channel_id
+            WHERE
+                m.thread_ts = $1 AND m.channel_id = $2 AND m.parent_user_id = $3
+            ORDER BY
+                m.ts ASC
             "#,
             chrono::NaiveDateTime::from_pg_ts(message_ts),
             channel_id,
             user_id
         )
-        .fetch_all(&self.tummy_conn_pool)
-        .await?;
+            .fetch_all(&self.tummy_conn_pool)
+            .await?;
         Ok(replies.into_iter().map(Message::from).collect())
     }
 
@@ -191,18 +249,45 @@ impl Tummy {
             query_as!(
             DBParentMessage,
             r#"
-            SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
-            FROM messages as m
-            INNER JOIN users ON users.id = m.user_id
+            SELECT
+                m.channel_id,
+                ch.name AS channel_name, -- Added the channel name here
+                m.user_id,
+                m.msg_text,
+                m.ts,
+                m.thread_ts,
+                m.parent_user_id,
+                u.id,
+                u.name,
+                u.real_name,
+                u.display_name,
+                u.image_url,
+                u.email,
+                u.deleted,
+                u.is_bot,
+                c.cnt
+            FROM
+                messages AS m
+            INNER JOIN users AS u ON u.id = m.user_id
+            INNER JOIN channels AS ch ON ch.id = m.channel_id -- Joined the channels table
             LEFT JOIN (
-                SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
-                FROM messages
-                WHERE channel_id = $1
-                GROUP BY join_ts, parent_user_id
-            ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
-            WHERE m.channel_id = $1 AND m.ts < $2 AND m.parent_user_id = ''
-            ORDER BY ts DESC LIMIT $3
+                SELECT
+                    COUNT(*) as cnt,
+                    thread_ts as join_ts,
+                    parent_user_id
+                FROM
+                    messages
+                WHERE
+                    channel_id = $1
+                GROUP BY
+                    join_ts,
+                    parent_user_id
+            ) AS c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+            WHERE
+                m.channel_id = $1 AND m.ts < $2 AND m.parent_user_id = ''
+            ORDER BY
+                ts DESC
+            LIMIT $3
             "#,
             channel_id,
             timestamp,
@@ -217,18 +302,45 @@ impl Tummy {
             query_as!(
             DBParentMessage,
             "
-            SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-            id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
-            FROM messages as m
-            INNER JOIN users ON users.id = m.user_id
+            SELECT
+                m.channel_id,
+                ch.name AS channel_name, -- Added the channel name here
+                m.user_id,
+                m.msg_text,
+                m.ts,
+                m.thread_ts,
+                m.parent_user_id,
+                u.id,
+                u.name,
+                u.real_name,
+                u.display_name,
+                u.image_url,
+                u.email,
+                u.deleted,
+                u.is_bot,
+                c.cnt
+            FROM
+                messages AS m
+            INNER JOIN users AS u ON u.id = m.user_id
+            INNER JOIN channels AS ch ON ch.id = m.channel_id -- Joined the channels table
             LEFT JOIN (
-                SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
-                FROM messages
-                WHERE channel_id = $1
-                GROUP BY join_ts, parent_user_id
-            ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
-            WHERE m.channel_id = $1 AND m.parent_user_id = ''
-            ORDER BY m.ts DESC LIMIT $2
+                SELECT
+                    COUNT(*) as cnt,
+                    thread_ts as join_ts,
+                    parent_user_id
+                FROM
+                    messages
+                WHERE
+                    channel_id = $1
+                GROUP BY
+                    join_ts,
+                    parent_user_id
+            ) AS c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+            WHERE
+                m.channel_id = $1 AND m.parent_user_id = ''
+            ORDER BY
+                m.ts DESC
+            LIMIT $2
          ",
             channel_id,
             *msgs_per_page as i64

@@ -9,15 +9,9 @@ import {
     ThreadView,
     SearchResults,
     ErrorView,
-} from './components'; // Importing all components from a single index file is a common practice
-
-// An index.ts file would look like this:
-// export * from './Message';
-// export * from './ChannelsSidebar';
-// ...etc.
+} from './components';
 
 const App: React.FC = () => {
-    // All application logic and state are now managed by the custom hook
     const {
         isLoggedIn,
         handleLogin,
@@ -40,9 +34,10 @@ const App: React.FC = () => {
         handleScroll,
     } = useChatData('Realm of Immortals');
 
-    // A component to manage the main message display area
-    const MessageView: React.FC = () => (
-        <div className="flex-1 flex flex-col h-full bg-gray-800 text-gray-200">
+    // This component now correctly manages only the primary content area.
+    // It is no longer responsible for rendering the ThreadView.
+    const MainContent: React.FC = () => (
+        <div className="flex-1 flex flex-col h-full bg-gray-800 text-gray-200 min-w-0">
             <div className="flex-none p-4 bg-gray-900 shadow-lg border-b border-gray-700">
                 <div className="flex items-center space-x-2">
                     <Search className="text-gray-400" />
@@ -56,12 +51,14 @@ const App: React.FC = () => {
                     />
                 </div>
             </div>
+
+            {/* The main view only switches between 'channels', 'search', and 'error' states. */}
             {isLoading && view === 'channels' && messages.length === 0 && (
                 <div className="flex-1 flex items-center justify-center">
                     <Loader2 className="animate-spin text-indigo-400 w-12 h-12" />
                 </div>
             )}
-            {!isLoading && view === 'search' && searchResults.length > 0 && (
+            {view === 'search' && (
                 <SearchResults results={searchResults} closeResults={closeSearchResults} onRepliesClick={handleRepliesClick} />
             )}
             {view === 'channels' && selectedChannel && (
@@ -77,10 +74,7 @@ const App: React.FC = () => {
                     />
                 </>
             )}
-            {!isLoading && view === 'thread' && selectedThread && (
-                <ThreadView thread={selectedThread} closeThread={closeThread} />
-            )}
-            {!isLoading && view === 'error' && <ErrorView message={error || "An unknown error occurred."} />}
+            {view === 'error' && <ErrorView message={error || "An unknown error occurred."} />}
         </div>
     );
 
@@ -97,7 +91,17 @@ const App: React.FC = () => {
                         onChannelClick={handleChannelClick}
                         appTitle={appTitle}
                     />
-                    <MessageView />
+
+                    <MainContent />
+
+                    {/*
+                      * FIX: The ThreadView is now a sibling to MainContent.
+                      * Its visibility is controlled *only* by whether `selectedThread` has data,
+                      * which correctly renders it as a sidebar without affecting the main view.
+                    */}
+                    {selectedThread && (
+                        <ThreadView thread={selectedThread} closeThread={closeThread} />
+                    )}
                 </div>
             ) : (
                 <Login handleLogin={handleLogin} appTitle={appTitle} />

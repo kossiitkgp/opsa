@@ -66,3 +66,78 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Add this to your global stylesheet, e.g., src/index.css */
+
+/*
+ * Styles for file and image attachments in messages.
+ */
+
+/* Main container for a group of attachments */
+.files {
+  display: flex;
+  flex-wrap: wrap; /* Allows multiple attachments to wrap to the next line */
+  gap: 12px;       /* Creates space between each attachment */
+  margin-top: 12px;/* Adds space between the message text and the attachments */
+}
+
+/* Styles for image attachments */
+.image-link {
+  display: block;
+  max-width: 250px;       /* Sets a maximum width for image previews */
+  border-radius: 8px;     /* Rounds the corners of the image container */
+  overflow: hidden;       /* Ensures the inner image respects the rounded corners */
+  border: 1px solid #475569; /* slate-600 border */
+  transition: border-color 0.2s ease-in-out;
+}
+
+.image-link:hover {
+  border-color: #8b5cf6; /* violet-500 on hover, for consistency */
+}
+
+.image-link img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover; /* Ensures the image scales nicely within its container */
+}
+
+/* Styles for generic file links (non-images) */
+.file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #334155; /* slate-700 background */
+  color: #cbd5e1;           /* slate-300 text */
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  border: 1px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.file-link:hover {
+  background-color: #475569; /* slate-600 */
+  border-color: #8b5cf6;     /* violet-500 */
+  color: #ffffff;
+}
+
+/* Adds a simple file icon before the filename for better visual distinction */
+.file-link::before {
+  content: '📄'; /* You can replace this with an SVG icon for a sharper look */
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* Styles for the embedded video player */
+.message-video {
+  max-width: 500px; /* Adjust max-width as needed */
+  width: 100%;
+  border-radius: 8px; /* Match the theme's rounded corners */
+  display: block;
+  margin-top: 8px; /* Add some space above the video */
+  background-color: #000; /* Black background for letterboxing */
+}
