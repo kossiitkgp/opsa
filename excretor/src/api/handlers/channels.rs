@@ -47,7 +47,7 @@ pub async fn load_channel(
     let channel = state.tummy.get_channel_info(&channel_id).await?;
     let messages = state
         .tummy
-        .fetch_msg_page(&channel.id, &None, &10)
+        .fetch_msg_page(&channel.id, &None, &50)
         .await?;
     let channel_id = channel.id.clone();
     Ok((
