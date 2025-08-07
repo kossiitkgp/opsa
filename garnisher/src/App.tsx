@@ -50,8 +50,11 @@ interface ChannelsSidebarProps {
     appTitle: string;
 }
 
-interface ChannelViewProps {
+interface ChannelHeaderProps {
     channel: Channel;
+}
+
+interface ChannelViewProps {
     messages: Message[];
     onRepliesClick: (message: Message) => void;
     messageListRef: React.RefObject<HTMLDivElement>;
@@ -138,47 +141,46 @@ const ChannelsSidebar: React.FC<ChannelsSidebarProps> = ({ channels, selectedCha
     </div>
 );
 
+// New component for the channel header
+const ChannelHeader: React.FC<ChannelHeaderProps> = ({ channel }) => (
+    <div className="flex-none p-6 bg-gray-900 shadow-lg border-b border-gray-700">
+        <h1 className="text-3xl font-bold text-white mb-2">#{channel.name}</h1>
+        <p className="text-gray-400"><b>Topic:</b> {channel.topic}</p>
+        <p className="text-gray-400"><b>Purpose:</b> {channel.purpose}</p>
+        {/*<div className="mt-4">*/}
+        {/*    <label htmlFor="date-picker" className="text-gray-400 text-sm block">Showing messages since:</label>*/}
+        {/*    <input*/}
+        {/*        id="date-picker"*/}
+        {/*        className="bg-gray-700 text-gray-200 rounded-lg px-3 py-1 mt-1 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"*/}
+        {/*        type="text"*/}
+        {/*        placeholder="01 January 1970"*/}
+        {/*        data-channel-id={channel.id}*/}
+        {/*    />*/}
+        {/*</div>*/}
+    </div>
+);
+
 // The main view for a specific channel's messages
-const ChannelView: React.FC<ChannelViewProps> = ({ channel, messages, onRepliesClick, messageListRef, onScroll, allMessagesLoaded, isLoading }) => {
+const ChannelView: React.FC<ChannelViewProps> = ({ messages, onRepliesClick, messageListRef, onScroll, allMessagesLoaded, isLoading }) => {
     return (
-        // The main container for ChannelView now has the overflow-y-auto and padding
-        <div ref={messageListRef} onScroll={onScroll} className="flex-1 flex flex-col h-full overflow-y-auto rounded-lg bg-gray-800 shadow-inner p-6">
-            {/* The channel header is now sticky */}
-            <div className="sticky top-0 z-10 flex-shrink-0 bg-gray-900 p-6 rounded-2xl shadow-lg mb-6 border border-gray-700">
-                <h1 className="text-3xl font-bold text-white mb-2">#{channel.name}</h1>
-                <p className="text-gray-400"><b>Topic:</b> {channel.topic}</p>
-                <p className="text-gray-400"><b>Purpose:</b> {channel.purpose}</p>
-                {/* This is a placeholder for a date picker functionality */}
-                <div className="mt-4">
-                    <label htmlFor="date-picker" className="text-gray-400 text-sm block">Showing messages since:</label>
-                    <input
-                        id="date-picker"
-                        className="bg-gray-700 text-gray-200 rounded-lg px-3 py-1 mt-1 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
-                        type="text"
-                        placeholder="01 January 1970"
-                        data-channel-id={channel.id}
-                    />
+        // The message list is now the dedicated scrollable container.
+        <div ref={messageListRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Display a loading spinner at the top while new messages are being fetched */}
+            {isLoading && (
+                <div className="flex justify-center my-4">
+                    <Loader2 className="animate-spin text-indigo-400 w-8 h-8" />
                 </div>
-            </div>
-            {/* The inner container no longer has its own overflow */}
-            <div className="space-y-4 flex flex-col p-4">
-                {/* Display a loading spinner at the top while new messages are being fetched */}
-                {isLoading && (
-                    <div className="flex justify-center my-4">
-                        <Loader2 className="animate-spin text-indigo-400 w-8 h-8" />
-                    </div>
-                )}
-                {/* This is for when there are no more messages to load */}
-                {allMessagesLoaded && (
-                    <div className="text-center text-gray-500 my-4">
-                        <p>No more messages to load.</p>
-                    </div>
-                )}
-                {/* Messages are now mapped in their natural order (oldest to newest) */}
-                {messages.map((message) => (
-                    <Message key={message.id} message={message} onRepliesClick={onRepliesClick} />
-                ))}
-            </div>
+            )}
+            {/* This is for when there are no more messages to load */}
+            {allMessagesLoaded && (
+                <div className="text-center text-gray-500 my-4">
+                    <p>No more messages to load.</p>
+                </div>
+            )}
+            {/* Messages are now mapped in their natural order (oldest to newest) */}
+            {messages.map((message) => (
+                <Message key={message.id} message={message} onRepliesClick={onRepliesClick} />
+            ))}
         </div>
     );
 };
@@ -340,20 +342,13 @@ const App: React.FC = () => {
             setView('error');
         } finally {
             setIsLoading(false);
-            // No need for setTimeout here; useEffect will handle scrolling.
         }
     };
 
 
     // General-purpose function to fetch older messages during infinite scroll
     const fetchOlderMessages = async (channelId: string, timestamp: string | null) => {
-        // Log to check if the function is even being called.
-        console.log('Fetching older messages...');
-        console.log(`Current state: isLoading=${isLoading}, allMessagesLoaded=${allMessagesLoaded}, timestamp=${timestamp}`);
-
-        // Abort if already loading or all messages are loaded
         if (isLoading || (timestamp && allMessagesLoaded)) {
-            console.log('Aborting fetch: either loading, or all messages have been loaded.');
             return;
         }
 
@@ -363,15 +358,11 @@ const App: React.FC = () => {
             // Capture the scroll height before the state update, to be used for scroll adjustment
             if (messageListRef.current) {
                 previousScrollHeightRef.current = messageListRef.current.scrollHeight;
-                console.log(`Saved previous scroll height: ${previousScrollHeightRef.current}`);
             }
 
             const response = await fetch(API_ENDPOINTS.messages(channelId, timestamp));
             if (!response.ok) throw new Error(`Failed to fetch messages. Status: ${response.status}`);
             const data = await response.json();
-
-            // Log the API response to see what data we received.
-            console.log('API Response for older messages:', data);
 
             if (data.messages) {
                 const newMessages = data.messages;
@@ -379,44 +370,45 @@ const App: React.FC = () => {
                     setMessages((prevMessages) => [...newMessages, ...prevMessages]);
                     setOldestMessageTimestamp(data.before_msg_timestamp);
                 } else {
-                    console.log('No new messages received. Setting allMessagesLoaded to true.');
                     setAllMessagesLoaded(true);
                 }
             } else {
                 throw new Error('API response for messages is not in the expected format.');
             }
         } catch (err: any) {
-            console.error('Error fetching older messages:', err);
             setError(err.message);
             setView('error');
         } finally {
             setIsLoading(false);
-            console.log('Finished attempting to fetch older messages.');
         }
     };
 
-    // This useEffect handles scrolling to the bottom on initial channel load,
-    // and maintaining the scroll position when more messages are prepended.
+    // This useEffect handles scrolling, checking for two cases:
+    // 1. Initial channel load: scroll to the bottom.
+    // 2. Infinite scroll: maintain scroll position when new messages are prepended.
     useEffect(() => {
-        if (!messageListRef.current || !messages.length) return;
+        // We only proceed if the message list and messages exist
+        if (!messageListRef.current || messages.length === 0) return;
 
-        // Logic for initial load: scroll to the bottom
-        // This check ensures we only scroll on the first message load for a channel.
-        if (!oldestMessageTimestamp) {
-            console.log('Initial channel load. Scrolling to bottom.');
-            messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-            return;
-        }
-
-        // Logic for infinite scroll: maintain position
-        // This runs when the messages array is updated with older messages.
+        // Condition for maintaining scroll position after prepending new messages
         if (previousScrollHeightRef.current !== null) {
-            const currentScrollHeight = messageListRef.current.scrollHeight;
-            const heightDifference = currentScrollHeight - previousScrollHeightRef.current;
-            messageListRef.current.scrollTop += heightDifference;
-            console.log(`Scroll position adjusted by ${heightDifference}px.`);
-            // Reset the ref after adjustment to prevent re-triggering this logic
-            previousScrollHeightRef.current = null;
+            // The scroll adjustment is now wrapped in a setTimeout.
+            // This ensures the DOM has a chance to update with the new messages
+            // before we try to calculate and set the new scroll position.
+            setTimeout(() => {
+                const newScrollHeight = messageListRef.current!.scrollHeight;
+                const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
+                messageListRef.current!.scrollTop += heightDifference;
+                // Reset the ref after adjustment
+                previousScrollHeightRef.current = null;
+            }, 0);
+        } else {
+            // Condition for initial load (when the channel is first opened)
+            // `oldestMessageTimestamp` is null only on the very first message fetch for a channel.
+            // This ensures we only scroll to the bottom once.
+            if (oldestMessageTimestamp === null) {
+                messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+            }
         }
     }, [messages]);
 
@@ -464,14 +456,10 @@ const App: React.FC = () => {
     // Handle infinite scrolling
     const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop } = e.currentTarget;
-        console.log(`Scroll Event: scrollTop is ${scrollTop}`);
         // We trigger the load when the user is at the top of the scrollable area
         // We use scrollTop === 0 for more precise triggering.
         if (scrollTop === 0 && !isLoading && !allMessagesLoaded) {
-            console.log('Condition met: scrolled to top. Calling fetchOlderMessages.');
             await fetchOlderMessages(selectedChannel!.id, oldestMessageTimestamp);
-        } else {
-            console.log('Condition not met. Current state:', { scrollTop, isLoading, allMessagesLoaded });
         }
     };
 
@@ -544,8 +532,10 @@ const App: React.FC = () => {
 
     // A component to manage the main message display area
     const MessageView: React.FC = () => (
-        <div className="flex-1 p-4 flex flex-col h-full bg-gray-800 text-gray-200">
-            <div className="flex-none p-4 bg-gray-900 rounded-lg shadow-lg mb-4">
+        // The main container is now a flex column with a full height
+        <div className="flex-1 flex flex-col h-full bg-gray-800 text-gray-200">
+            {/* The search bar is now a component with a simple bottom border to separate it from the header */}
+            <div className="flex-none p-4 bg-gray-900 shadow-lg border-b border-gray-700">
                 <div className="flex items-center space-x-2">
                     <Search className="text-gray-400" />
                     <input
@@ -567,15 +557,18 @@ const App: React.FC = () => {
                 <SearchResults results={searchResults} closeResults={closeSearchResults} onRepliesClick={handleRepliesClick} />
             )}
             {view === 'channels' && selectedChannel && (
-                <ChannelView
-                    channel={selectedChannel}
-                    messages={messages}
-                    onRepliesClick={handleRepliesClick}
-                    messageListRef={messageListRef}
-                    onScroll={handleScroll}
-                    allMessagesLoaded={allMessagesLoaded}
-                    isLoading={isLoading}
-                />
+                <>
+                    {/* The channel header is now its own component outside of the scrollable area */}
+                    <ChannelHeader channel={selectedChannel} />
+                    <ChannelView
+                        messages={messages}
+                        onRepliesClick={handleRepliesClick}
+                        messageListRef={messageListRef}
+                        onScroll={handleScroll}
+                        allMessagesLoaded={allMessagesLoaded}
+                        isLoading={isLoading}
+                    />
+                </>
             )}
             {!isLoading && view === 'thread' && selectedThread && (
                 <ThreadView thread={selectedThread} closeThread={closeThread} />
