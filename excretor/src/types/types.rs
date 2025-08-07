@@ -1,9 +1,9 @@
 use serde::Serialize;
 use crate::{
     db::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
-    tummy::SlackDateTime,
 };
 use sqlx::types::chrono;
+use crate::db::tummy::SlackDateTime;
 
 #[derive(Serialize)]
 pub struct Message {

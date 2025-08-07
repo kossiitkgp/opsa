@@ -1,4 +1,4 @@
-use crate::models::{Channel, Message};
+use crate::types::{Channel, Message};
 use askama::Template;
 use serde::Serialize;
 
