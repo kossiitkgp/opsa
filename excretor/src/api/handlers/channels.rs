@@ -34,7 +34,7 @@ pub async fn get_channels(
 ///
 /// # Parameters
 /// - `state`: Shared application state.
-/// - `channel`: The channel ID as a path parameter.
+/// - `channel`: The channel id as a path parameter.
 ///
 /// # Returns
 /// On success, returns a JSON response with channel details, last message timestamp,
@@ -42,9 +42,9 @@ pub async fn get_channels(
 /// On failure, returns an application error.
 pub async fn load_channel(
     State(state): State<RouterState>,
-    Path(channel): Path<String>,
+    Path(channel_id): Path<String>,
 ) -> Result<(StatusCode, Response), AppError> {
-    let channel = state.tummy.get_channel_info(&channel).await?;
+    let channel = state.tummy.get_channel_info(&channel_id).await?;
     let messages = state
         .tummy
         .fetch_msg_page(&channel.id, &None, &10, &sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc())
@@ -57,9 +57,9 @@ pub async fn load_channel(
             ChannelDetailsResponse{
                 channel,
                 last_msg_timestamp: if let Some(last_msg) = messages.last() {
-                    last_msg.timestamp.to_string()
+                    Some(last_msg.timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string())
                 } else {
-                    sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc().to_string()
+                    None
                 },
                 messages,
                 channel_id,

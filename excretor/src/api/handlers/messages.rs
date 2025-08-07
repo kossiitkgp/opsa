@@ -125,7 +125,7 @@ pub async fn get_messages(
         Json(
             models::MessagesResponse {
                 messages,
-                last_msg_timestamp: new_last_msg_timestamp.to_string(),
+                last_msg_timestamp: new_last_msg_timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
                 channel_id,
             }
         ).into_response(),

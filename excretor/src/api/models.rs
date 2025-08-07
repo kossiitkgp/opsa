@@ -10,7 +10,7 @@ pub struct ChannelsResponse {
 pub struct ChannelDetailsResponse {
     pub channel: Channel,
     pub messages: Vec<Message>,
-    pub last_msg_timestamp: String,
+    pub last_msg_timestamp: Option<String>,
     pub channel_id: String,
 }
 

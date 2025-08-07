@@ -66,11 +66,11 @@ impl Tummy {
         Ok(db_channels.into_iter().map(Channel::from).collect())
     }
 
-    pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
+    pub async fn get_channel_info(&self, channel_id: &str) -> Result<Channel, sqlx::Error> {
         let channel = query_as!(
             DBChannel,
-            "SELECT * FROM channels WHERE name = $1",
-            channel_name
+            "SELECT * FROM channels WHERE id = $1",
+            channel_id
         )
             .fetch_one(&self.tummy_conn_pool)
             .await?;
