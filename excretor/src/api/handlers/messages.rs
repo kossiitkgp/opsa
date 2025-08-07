@@ -27,7 +27,7 @@ pub struct DateQuery {
     since: Option<String>,
 }
 
-pub(super) async fn search(
+pub async fn search(
     State(state): State<RouterState>,
     Form(payload): Form<SearchQuery>,
 ) -> Result<(StatusCode, Response), AppError> {
@@ -41,18 +41,18 @@ pub(super) async fn search(
         )
         .await?;
     todo!();
-    Ok((
-        StatusCode::OK,
-        Json(
-            templates::SearchResultsTemplate {
-                messages,
-                query: payload.query,
-            }
-        ).into_response()
-    ))
+    // Ok((
+    //     StatusCode::OK,
+    //     Json(
+    //         templates::SearchResultsTemplate {
+    //             messages,
+    //             query: payload.query,
+    //         }
+    //     ).into_response()
+    // ))
 }
 
-pub(super) async fn get_messages(
+pub async fn get_messages(
     State(state): State<RouterState>,
     Path(channel_id): Path<String>,
     pagination: Query<Pagination>,
@@ -80,21 +80,21 @@ pub(super) async fn get_messages(
         .map(|message| message.timestamp)
         .unwrap_or(sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc());
     todo!();
-    Ok((
-        StatusCode::OK,
-        Html(
-            templates::ChannelPageTemplate {
-                messages,
-                last_msg_timestamp: new_last_msg_timestamp.to_string(),
-                channel_id,
-            }
-                .render()?,
-        )
-            .into_response(),
-    ))
+    // Ok((
+    //     StatusCode::OK,
+    //     Html(
+    //         templates::ChannelPageTemplate {
+    //             messages,
+    //             last_msg_timestamp: new_last_msg_timestamp.to_string(),
+    //             channel_id,
+    //         }
+    //             .render()?,
+    //     )
+    //         .into_response(),
+    // ))
 }
 
-pub(super) async fn get_replies(
+pub async fn get_replies(
     State(state): State<RouterState>,
     message_data: Query<ReplyRequest>,
 ) -> Result<(StatusCode, Response), AppError> {
@@ -107,18 +107,18 @@ pub(super) async fn get_replies(
         )
         .await?;
     todo!();
-    Ok((
-        StatusCode::OK,
-        Html(
-            templates::ThreadTemplate {
-                messages,
-                parent_ts: message_data.ts.clone(),
-                channel_id: message_data.channel_id.clone(),
-                parent_user_id: message_data.user_id.clone(),
-            }
-                .render()
-                .unwrap(),
-        )
-            .into_response(),
-    ))
+    // Ok((
+    //     StatusCode::OK,
+    //     Html(
+    //         templates::ThreadTemplate {
+    //             messages,
+    //             parent_ts: message_data.ts.clone(),
+    //             channel_id: message_data.channel_id.clone(),
+    //             parent_user_id: message_data.user_id.clone(),
+    //         }
+    //             .render()
+    //             .unwrap(),
+    //     )
+    //         .into_response(),
+    // ))
 }

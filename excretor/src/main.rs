@@ -3,7 +3,6 @@ use clap::Parser;
 mod dbmodels;
 mod env;
 mod models;
-mod routing;
 mod templates;
 mod tummy;
 mod db;
@@ -13,7 +12,8 @@ mod types;
 use tracing::info;
 
 use tracing_subscriber::prelude::*;
-use tummy::Tummy;
+
+use db::tummy::Tummy;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -23,8 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdout_log = tracing_subscriber::fmt::layer();
     tracing_subscriber::registry().with(stdout_log).init();
 
-    let tummy = Tummy::init(&env_vars).await;
-    let app = routing::get_excretor_router(tummy, env_vars.clone());
+    let db_connection = Tummy::init(&env_vars).await;
+    let app = api::routes::get_excretor_router(db_connection, env_vars.clone());
 
     info!("Starting excretor on port {}.", env_vars.excretor_port);
     let listener =

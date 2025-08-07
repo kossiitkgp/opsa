@@ -8,15 +8,15 @@ use crate::api::errors::AppError;
 use axum::response::IntoResponse;
 
 
-pub(super) async fn fallback_avatar() -> Result<(StatusCode, Response), AppError> {
+pub async fn fallback_avatar() -> Result<(StatusCode, Response), AppError> {
     todo!();
-    Ok((
-        StatusCode::OK,
-        Html(templates::FallbackAvatarTemplate.render()?).into_response(),
-    ))
+    // Ok((
+    //     StatusCode::OK,
+    //     Html(templates::FallbackAvatarTemplate.render()?).into_response(),
+    // ))
 }
 
-pub(super) async fn assets(
+pub async fn assets(
     State(state): State<RouterState>,
     Path(filepath): Path<String>,
 ) -> Result<(StatusCode, Response), AppError> {
@@ -31,7 +31,7 @@ pub(super) async fn assets(
 
         let stream = ReaderStream::new(file);
         let body = Body::from_stream(stream);
-    
+
         Ok((StatusCode::OK, body.into_response()))
     } else {
         tracing::warn!(
@@ -44,4 +44,8 @@ pub(super) async fn assets(
             Body::from(String::from("Mortals are forbidden from accessing the requested file. This sin will be reported.")).into_response()
         ))
     }
+}
+
+pub async fn serve_react_app() -> Result<(StatusCode, Response), AppError> {
+    Ok((StatusCode::OK, "Hello app!".into_response()))
 }

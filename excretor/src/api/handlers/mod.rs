@@ -1,5 +1,10 @@
 pub mod handlers;
 pub mod channels;
 pub mod messages;
-mod auth;
-mod misc;
+pub mod auth;
+pub mod misc;
+
+pub use misc::*;
+pub use channels::*;
+pub use messages::*;
+pub use auth::*;

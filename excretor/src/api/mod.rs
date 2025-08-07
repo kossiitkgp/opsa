@@ -1,4 +1,4 @@
 mod handlers;
-mod routes;
+pub mod routes;
 mod models;
 mod errors;

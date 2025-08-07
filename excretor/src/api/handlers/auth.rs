@@ -20,7 +20,7 @@ pub struct AuthCallback {
     code: String,
 }
 
-pub(super) async fn auth(
+pub async fn auth(
     State(state): State<RouterState>,
 ) -> Result<(StatusCode, Response), AppError> {
     let scopes = "im:read";
@@ -38,7 +38,7 @@ pub(super) async fn auth(
     ))
 }
 
-pub(super) async fn auth_callback(
+pub async fn auth_callback(
     State(state): State<RouterState>,
     Query(request): Query<AuthCallback>,
     jar: CookieJar,
@@ -98,10 +98,10 @@ pub(super) async fn auth_callback(
     ))
 }
 
-pub(super) async fn login() -> Result<(StatusCode, Response), AppError> {
+pub async fn login() -> Result<(StatusCode, Response), AppError> {
     todo!();
-    Ok((
-        StatusCode::OK,
-        Html(templates::LoginTemplate.render()?).into_response(),
-    ))
+    // Ok((
+    //     StatusCode::OK,
+    //     Html(templates::LoginTemplate.render()?).into_response(),
+    // ))
 }
