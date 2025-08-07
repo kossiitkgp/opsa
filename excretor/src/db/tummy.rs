@@ -1,3 +1,6 @@
+use super::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser};
+use crate::env::EnvVars;
+use crate::types::{Channel, Message, User};
 use sqlx::{
     postgres::PgPoolOptions,
     query_as,
@@ -5,9 +8,6 @@ use sqlx::{
     PgPool,
 };
 use std::time::Duration;
-use super::dbmodels::{DBChannel, DBReply, DBParentMessage, DBUser};
-use crate::env::EnvVars;
-use crate::types::{User, Channel, Message};
 
 #[derive(Clone)]
 pub struct Tummy {
@@ -57,9 +57,7 @@ impl Tummy {
     }
 
     pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
-        let db_channels = query_as!(DBChannel,
-            "SELECT * FROM channels ORDER BY name ASC"
-        )
+        let db_channels = query_as!(DBChannel, "SELECT * FROM channels ORDER BY name ASC")
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
@@ -72,8 +70,8 @@ impl Tummy {
             "SELECT * FROM channels WHERE id = $1",
             channel_id
         )
-            .fetch_one(&self.tummy_conn_pool)
-            .await?;
+        .fetch_one(&self.tummy_conn_pool)
+        .await?;
         Ok(channel.into())
     }
 
@@ -83,70 +81,72 @@ impl Tummy {
         channel_id: Option<&str>,
         user_id: Option<&str>,
         limit: i64,
+        similarity_threshold: f32,
     ) -> color_eyre::Result<Vec<Message>> {
         let messages = match (channel_id, user_id) {
             (Some(channel_id), Some(user_id)) => query_as!(
-                DBReply,
-                r#"
-                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM messages
-                INNER JOIN(
-                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                    FROM users
-                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-                WHERE channel_id = $3 AND user_id = $4
-                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
-                LIMIT $2
-                "#, query_text, limit, channel_id, user_id
-            ).fetch_all(&self.tummy_conn_pool)
+            DBReply,
+            r#"
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot
+            FROM messages
+            INNER JOIN(
+                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM users
+            ) as u ON u.id = messages.user_id
+            WHERE similarity(msg_text, $1) > $5 AND channel_id = $3 AND user_id = $4
+            ORDER BY similarity(msg_text, $1) DESC
+            LIMIT $2
+            "#, query_text, limit, channel_id, user_id, similarity_threshold
+        ).fetch_all(&self.tummy_conn_pool)
                 .await?,
             (Some(channel_id), None) => query_as!(
-                DBReply,
-                r#"
-                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM messages
-                INNER JOIN(
-                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                    FROM users
-                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-                WHERE channel_id = $3
-                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
-                LIMIT $2
-                "#, query_text, limit, channel_id
-            ).fetch_all(&self.tummy_conn_pool)
+            DBReply,
+            r#"
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot
+            FROM messages
+            INNER JOIN(
+                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM users
+            ) as u ON u.id = messages.user_id
+            WHERE similarity(msg_text, $1) > $4 AND channel_id = $3
+            ORDER BY similarity(msg_text, $1) DESC
+            LIMIT $2
+            "#, query_text, limit, channel_id, similarity_threshold
+        ).fetch_all(&self.tummy_conn_pool)
                 .await?,
             (None, Some(user_id)) => query_as!(
-                DBReply,
-                r#"
-                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM messages
-                INNER JOIN(
-                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                    FROM users
-                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-                WHERE user_id = $3
-                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
-                LIMIT $2
-                "#, query_text, limit, user_id
-            ).fetch_all(&self.tummy_conn_pool)
+            DBReply,
+            r#"
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot
+            FROM messages
+            INNER JOIN(
+                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM users
+            ) as u ON u.id = messages.user_id
+            WHERE similarity(msg_text, $1) > $4 AND user_id = $3
+            ORDER BY similarity(msg_text, $1) DESC
+            LIMIT $2
+            "#, query_text, limit, user_id, similarity_threshold
+        ).fetch_all(&self.tummy_conn_pool)
                 .await?,
             (None, None) => query_as!(
-                DBReply,
-                r#"
-                SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot
-                FROM messages
-                INNER JOIN(
-                    SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
-                    FROM users
-                ) as u ON textsearchable_index_col @@ websearch_to_tsquery($1) AND u.id = messages.user_id
-                ORDER BY ts_rank_cd(textsearchable_index_col, websearch_to_tsquery($1), 2|4) DESC
-                LIMIT $2
-                "#, query_text, limit
-            ).fetch_all(&self.tummy_conn_pool)
+            DBReply,
+            r#"
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot
+            FROM messages
+            INNER JOIN(
+                SELECT id, name, real_name, display_name, image_url, email, deleted, is_bot
+                FROM users
+            ) as u ON u.id = messages.user_id
+            WHERE similarity(msg_text, $1) > $3
+            ORDER BY similarity(msg_text, $1) DESC
+            LIMIT $2
+            "#, query_text, limit, similarity_threshold
+        ).fetch_all(&self.tummy_conn_pool)
                 .await?,
         };
         Ok(messages.into_iter().map(Message::from).collect())
@@ -172,8 +172,8 @@ impl Tummy {
             channel_id,
             user_id
         )
-            .fetch_all(&self.tummy_conn_pool)
-            .await?;
+        .fetch_all(&self.tummy_conn_pool)
+        .await?;
         Ok(replies.into_iter().map(Message::from).collect())
     }
 
@@ -241,7 +241,6 @@ impl Tummy {
             .map(Message::from)
             .collect())
     }
-
 
     pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
         let user = query_as!(DBUser, "SELECT * FROM users WHERE id = $1", user_id)

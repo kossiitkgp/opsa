@@ -68,7 +68,8 @@ pub async fn search(
             &payload.query,
             payload.channel_id.as_deref(),
             payload.user_id.as_deref(),
-            5,
+            10,
+            0.1
         )
         .await?;
     Ok((
