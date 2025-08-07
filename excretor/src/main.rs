@@ -1,13 +1,9 @@
 use clap::Parser;
-
-mod dbmodels;
 mod env;
-mod models;
-mod templates;
-mod tummy;
 mod db;
 mod api;
 mod types;
+mod templates;
 
 use tracing::info;
 
