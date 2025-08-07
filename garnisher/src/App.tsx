@@ -32,7 +32,7 @@ const App = () => {
         channelDetail: (channelId) => `${API_BASE_URL}/api/channels/${channelId}`, // GET -> { channel: { ... }, messages: [{...}], last_msg_timestamp: "..." }
         messages: (channelId, lastTimestamp) => `${API_BASE_URL}/api/messages/${channelId}?last_msg_timestamp=${lastTimestamp}&per_page=10`, // GET,
         replies: (ts, userId, channelId) => `${API_BASE_URL}/api/replies?ts=${ts}&user_id=${userId}&channel_id=${channelId}`, // GET
-        search: `${API_BASE_URL}/search`, // POST with body: { query: '...' }
+        search: `${API_BASE_URL}/api/search`, // POST with body: { query: '...' }
     };
 
     // Fetch initial channel data on app load
@@ -116,14 +116,27 @@ const App = () => {
         setView('search');
         setError(null);
         try {
+            // Create a URLSearchParams object to encode the form data
+            const formData = new URLSearchParams();
+            formData.append('query', query);
+
             const response = await fetch(API_ENDPOINTS.search, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: query }),
+                headers: {
+                    // Set the correct Content-Type for URL-encoded form data
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                // The body is the URL-encoded string
+                body: formData,
             });
             if (!response.ok) throw new Error('Search failed.');
             const data = await response.json();
-            setSearchResults(data);
+            // The search API now returns an object with a 'messages' key
+            if (data.messages) {
+                setSearchResults(data.messages);
+            } else {
+                setSearchResults([]);
+            }
         } catch (err) {
             setError(err.message);
             setView('error');
