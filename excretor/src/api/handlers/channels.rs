@@ -1,3 +1,6 @@
+//! Channel-related API handlers.
+//! Provides endpoints for listing all channels and loading details for a specific channel.
+
 use crate::api::errors::AppError;
 use crate::api::routes::RouterState;
 use axum::extract::{Path, State};
@@ -5,6 +8,14 @@ use axum::response::IntoResponse;
 use axum::{http::StatusCode, response::{Response, Json}};
 use crate::api::models::{ChannelsResponse, ChannelDetailsResponse};
 
+/// Fetches all available channels.
+///
+/// # Parameters
+/// - `state`: Shared application state.
+///
+/// # Returns
+/// On success, returns a JSON response with a list of channels and HTTP 200 OK.
+/// On failure, returns an application error.
 pub async fn get_channels(
     State(state): State<RouterState>,
 ) -> Result<(StatusCode, Response), AppError> {
@@ -19,6 +30,16 @@ pub async fn get_channels(
     ))
 }
 
+/// Loads details for a specific channel, including recent messages.
+///
+/// # Parameters
+/// - `state`: Shared application state.
+/// - `channel`: The channel ID as a path parameter.
+///
+/// # Returns
+/// On success, returns a JSON response with channel details, last message timestamp,
+/// messages, and channel ID, with HTTP 200 OK.
+/// On failure, returns an application error.
 pub async fn load_channel(
     State(state): State<RouterState>,
     Path(channel): Path<String>,

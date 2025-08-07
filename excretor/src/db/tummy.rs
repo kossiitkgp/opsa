@@ -25,7 +25,8 @@ impl SlackDateTime for NaiveDateTime {
     }
 
     fn from_pg_ts(str: &str) -> Self {
-        Self::parse_from_str(str, "%Y-%m-%d %X%.f").unwrap()
+        println!("{}", str);
+        Self::parse_from_str(str, "%Y-%m-%dT%H:%M:%S%.f").unwrap()
     }
 }
 

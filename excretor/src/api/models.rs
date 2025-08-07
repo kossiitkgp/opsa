@@ -1,5 +1,5 @@
 use crate::types::{Channel, Message};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub struct ChannelsResponse {

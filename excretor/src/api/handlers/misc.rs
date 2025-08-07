@@ -1,12 +1,25 @@
+//! Miscellaneous API handlers.
+//! Provides endpoints for serving static assets and the React frontend application.
+
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{Response};
+use axum::response::Response;
 use tokio_util::io::ReaderStream;
 use crate::api::routes::RouterState;
 use crate::api::errors::AppError;
 use axum::response::IntoResponse;
 
+/// Serves static asset files from the configured directory.
+///
+/// # Parameters
+/// - `state`: Shared application state containing environment variables.
+/// - `filepath`: Path to the requested static file, relative to the assets directory.
+///
+/// # Returns
+/// On success, returns the file contents as a streamed response with HTTP 200 OK.
+/// If the file is outside the allowed directory, returns HTTP 403 Forbidden.
+/// On failure, returns an application error.
 pub async fn assets(
     State(state): State<RouterState>,
     Path(filepath): Path<String>,
@@ -37,6 +50,10 @@ pub async fn assets(
     }
 }
 
+/// Serves the React frontend application.
+///
+/// # Returns
+/// Returns a placeholder response for the React app with HTTP 200 OK.
 pub async fn serve_react_app() -> Result<(StatusCode, Response), AppError> {
     Ok((StatusCode::OK, "Hello app!".into_response()))
 }

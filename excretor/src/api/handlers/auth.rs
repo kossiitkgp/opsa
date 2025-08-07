@@ -1,3 +1,7 @@
+//! Authentication handlers for Slack OAuth and JWT token issuance.
+//! Provides endpoints for starting the OAuth flow and handling the callback,
+//! including token creation and cookie management.
+
 use std::collections::BTreeMap;
 use axum::body::Body;
 use axum::extract::{Query, State};
@@ -14,12 +18,20 @@ use sha2::Sha256;
 use crate::api::errors::AppError;
 use crate::api::routes::{RouterState, FORBIDDEN_MSG};
 
-
+/// Query parameters for the OAuth callback.
 #[derive(Deserialize)]
 pub struct AuthCallback {
     code: String,
 }
 
+/// Initiates the Slack OAuth authentication flow.
+/// Redirects the user to Slack's authorization URL.
+///
+/// # Parameters
+/// - `state`: Shared application state containing environment variables.
+///
+/// # Returns
+/// A redirect response to Slack's OAuth page.
 pub async fn auth(
     State(state): State<RouterState>,
 ) -> Result<(StatusCode, Response), AppError> {
@@ -38,6 +50,17 @@ pub async fn auth(
     ))
 }
 
+/// Handles the OAuth callback from Slack.
+/// Exchanges the code for an access token, verifies the user, and sets a JWT cookie.
+///
+/// # Parameters
+/// - `state`: Shared application state.
+/// - `request`: Query parameters containing the OAuth code.
+/// - `jar`: Cookie jar for setting authentication cookies.
+///
+/// # Returns
+/// On success, sets a JWT token cookie and redirects to the home page.
+/// On failure, returns an unauthorized response.
 pub async fn auth_callback(
     State(state): State<RouterState>,
     Query(request): Query<AuthCallback>,
@@ -48,7 +71,7 @@ pub async fn auth_callback(
         "https://slack.com/api/oauth.v2.access?client_id={}&client_secret={}&code={}&redirect_uri={}",
         state.env_vars.slack_client_id, state.env_vars.slack_client_secret, code, state.env_vars.slack_redirect_uri
     );
-    // request slack for access token
+    // Request Slack for access token
     let response = Client::new().get(slack_auth_url).send().await?;
 
     if response.status() != StatusCode::OK {

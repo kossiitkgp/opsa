@@ -1,3 +1,7 @@
+//! Message-related API handlers.
+//! Provides endpoints for searching messages, fetching messages for a channel,
+//! and retrieving replies in a thread.
+
 use crate::db::tummy::SlackDateTime;
 use crate::api::errors::AppError;
 use crate::api::routes::RouterState;
@@ -7,31 +11,53 @@ use axum::{http::StatusCode, response::Response, Json};
 use serde::Deserialize;
 use crate::api::models;
 
+/// Request payload for fetching replies to a message.
 #[derive(Deserialize)]
 pub struct ReplyRequest {
+    /// Channel ID where the message is posted.
     pub channel_id: String,
+    /// Timestamp of the parent message.
     pub ts: String,
+    /// User ID of the parent message author.
     pub user_id: String,
 }
 
+/// Form data for searching messages.
 #[derive(Deserialize)]
 pub struct SearchQuery {
+    /// Search query string.
     query: String,
+    /// Optional channel ID to filter search.
     channel_id: Option<String>,
+    /// Optional user ID to filter search.
     user_id: Option<String>,
 }
 
+/// Query parameters for paginating messages.
 #[derive(Deserialize)]
 pub struct Pagination {
+    /// Timestamp of the last message from the previous page.
     last_msg_timestamp: Option<String>,
+    /// Number of messages per page.
     per_page: u32,
 }
 
+/// Query parameters for filtering messages by date.
 #[derive(Deserialize)]
 pub struct DateQuery {
+    /// Optional ISO date string to fetch messages since this date.
     since: Option<String>,
 }
 
+/// Searches messages by text, channel, and user.
+///
+/// # Parameters
+/// - `state`: Shared application state.
+/// - `payload`: Form data containing the search query and optional filters.
+///
+/// # Returns
+/// On success, returns a JSON response with matching messages and HTTP 200 OK.
+/// On failure, returns an application error.
 pub async fn search(
     State(state): State<RouterState>,
     Form(payload): Form<SearchQuery>,
@@ -56,6 +82,17 @@ pub async fn search(
     ))
 }
 
+/// Fetches messages for a specific channel, with pagination and optional date filter.
+///
+/// # Parameters
+/// - `state`: Shared application state.
+/// - `channel_id`: The channel ID as a path parameter.
+/// - `pagination`: Query parameters for pagination.
+/// - `date_query`: Query parameters for date filtering.
+///
+/// # Returns
+/// On success, returns a JSON response with messages, last message timestamp, and channel ID, with HTTP 200 OK.
+/// On failure, returns an application error.
 pub async fn get_messages(
     State(state): State<RouterState>,
     Path(channel_id): Path<String>,
@@ -95,6 +132,15 @@ pub async fn get_messages(
     ))
 }
 
+/// Fetches replies for a specific message (thread).
+///
+/// # Parameters
+/// - `state`: Shared application state.
+/// - `message_data`: Query parameters containing the parent message's channel ID, timestamp, and user ID.
+///
+/// # Returns
+/// On success, returns a JSON response with thread messages, parent timestamp, channel ID, and parent user ID, with HTTP 200 OK.
+/// On failure, returns an application error.
 pub async fn get_replies(
     State(state): State<RouterState>,
     message_data: Query<ReplyRequest>,
