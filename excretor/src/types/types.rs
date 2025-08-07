@@ -6,7 +6,7 @@ use sqlx::types::chrono;
 use crate::db::tummy::SlackDateTime;
 
 /// Represents a message in a channel, including user and thread information.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     /// The ID of the channel where the message was posted.
     pub channel_id: String,
@@ -97,7 +97,7 @@ impl From<DBReply> for Message {
 }
 
 /// Represents a user in the system.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     /// The unique user ID.
     pub id: String,

@@ -14,7 +14,7 @@ Monorepo of top secret stuff developed in an n-sided polygonal building.
 3. Make sure [GNU Make](https://www.gnu.org/software/make/) is installed.
 4. Install [`cargo-watch`](https://github.com/watchexec/cargo-watch) to compile on change: `cargo install cargo-watch`.
 5. Install [`sqlx-cli`](https://lib.rs/crates/sqlx-cli) for compile-time checking of SQL queries: `cargo install sqlx-cli`.
-6. Download a slack archive `.zip` file from your required workspace. [How-to](slack.com/intl/en-in/help/articles/201658943-Export-your-workspace-data)
+6. Download a slack archive `.zip` file from your required workspace. [How-to](https://slack.com/intl/en-in/help/articles/201658943-Export-your-workspace-data)
 7. Create `.env` file in project root from `.env.template`
 8. Run `make digest FILE="/path/to/file.zip"`
 9. Run `make dev`.

@@ -47,16 +47,15 @@ pub async fn load_channel(
     let channel = state.tummy.get_channel_info(&channel_id).await?;
     let messages = state
         .tummy
-        .fetch_msg_page(&channel.id, &None, &10, &sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc())
+        .fetch_msg_page(&channel.id, &None, &10)
         .await?;
-
     let channel_id = channel.id.clone();
     Ok((
         StatusCode::OK,
         Json(
             ChannelDetailsResponse{
                 channel,
-                last_msg_timestamp: if let Some(last_msg) = messages.last() {
+                before_msg_timestamp: if let Some(last_msg) = messages.first() {
                     Some(last_msg.timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string())
                 } else {
                     None

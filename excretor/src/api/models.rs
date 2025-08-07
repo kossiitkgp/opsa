@@ -10,7 +10,7 @@ pub struct ChannelsResponse {
 pub struct ChannelDetailsResponse {
     pub channel: Channel,
     pub messages: Vec<Message>,
-    pub last_msg_timestamp: Option<String>,
+    pub before_msg_timestamp: Option<String>,
     pub channel_id: String,
 }
 
@@ -23,7 +23,7 @@ pub struct SearchResultsResponse {
 #[derive(Serialize)]
 pub struct MessagesResponse {
     pub messages: Vec<Message>,
-    pub last_msg_timestamp: String,
+    pub before_msg_timestamp: String,
     pub channel_id: String,
 }
 

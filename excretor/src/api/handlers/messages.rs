@@ -37,7 +37,7 @@ pub struct SearchQuery {
 #[derive(Deserialize)]
 pub struct Pagination {
     /// Timestamp of the last message from the previous page.
-    last_msg_timestamp: Option<String>,
+    before_msg_timestamp: Option<String>,
     /// Number of messages per page.
     per_page: u32,
 }
@@ -99,25 +99,20 @@ pub async fn get_messages(
     pagination: Query<Pagination>,
     date_query: Query<DateQuery>,
 ) -> Result<(StatusCode, Response), AppError> {
-    let messages = state
+    let mut messages = state
         .tummy
         .fetch_msg_page(
             &channel_id,
             &pagination
-                .last_msg_timestamp
+                .before_msg_timestamp
                 .as_ref()
                 .map(|ts| sqlx::types::chrono::NaiveDateTime::from_pg_ts(ts)),
             &pagination.per_page,
-            &date_query
-                .since
-                .as_ref()
-                .map(|ts| sqlx::types::chrono::NaiveDateTime::from_pg_ts(ts))
-                .unwrap_or(sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc()),
         )
         .await?;
 
-    let new_last_msg_timestamp = messages
-        .last()
+    let oldest_message_timestamp = messages
+        .first()
         .map(|message| message.timestamp)
         .unwrap_or(sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc());
     Ok((
@@ -125,7 +120,7 @@ pub async fn get_messages(
         Json(
             models::MessagesResponse {
                 messages,
-                last_msg_timestamp: new_last_msg_timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
+                before_msg_timestamp: oldest_message_timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
                 channel_id,
             }
         ).into_response(),

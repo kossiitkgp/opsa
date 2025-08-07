@@ -180,63 +180,68 @@ impl Tummy {
     pub async fn fetch_msg_page(
         &self,
         channel_id: &str,
-        last_msg_timestamp: &Option<chrono::NaiveDateTime>,
+        before_msg_timestamp: &Option<chrono::NaiveDateTime>,
         msgs_per_page: &u32,
-        since_timestamp: &chrono::NaiveDateTime,
     ) -> Result<Vec<Message>, sqlx::Error> {
-        let fetched_messages = if let Some(timestamp) = last_msg_timestamp {
+        let fetched_messages = if let Some(timestamp) = before_msg_timestamp {
+            // This is the backward pagination case.
+            // We fetch messages that have a timestamp BEFORE the provided `before_msg_timestamp`.
+            // The `ORDER BY ts DESC` ensures we get the most recent messages of the
+            // older batch first.
             query_as!(
-                DBParentMessage,
-                r#"
-                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
-                FROM messages as m
-                INNER JOIN users ON users.id = m.user_id
-                LEFT JOIN (
-                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
-                    FROM messages
-                    WHERE channel_id = $1
-                    GROUP BY join_ts, parent_user_id
-                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
-                WHERE m.channel_id = $1 AND m.ts > $2 AND m.ts > $3 AND m.parent_user_id = ''
-                ORDER BY ts ASC LIMIT $4
-                "#,
-                channel_id,
-                since_timestamp,
-                timestamp,
-                *msgs_per_page as i64
-            )
+            DBParentMessage,
+            r#"
+            SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
+            FROM messages as m
+            INNER JOIN users ON users.id = m.user_id
+            LEFT JOIN (
+                SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                FROM messages
+                WHERE channel_id = $1
+                GROUP BY join_ts, parent_user_id
+            ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+            WHERE m.channel_id = $1 AND m.ts < $2 AND m.parent_user_id = ''
+            ORDER BY ts DESC LIMIT $3
+            "#,
+            channel_id,
+            timestamp,
+            *msgs_per_page as i64
+        )
                 .fetch_all(&self.tummy_conn_pool)
                 .await?
         } else {
+            // This is the initial load case.
+            // We fetch the most recent messages from the channel.
+            // `ORDER BY ts DESC` gets the latest messages, and `LIMIT` gets a single page.
             query_as!(
-                DBParentMessage,
-                "
-                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
-                FROM messages as m
-                INNER JOIN users ON users.id = m.user_id
-                LEFT JOIN (
-                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
-                    FROM messages
-                    WHERE channel_id = $1
-                    GROUP BY join_ts, parent_user_id
-                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
-                WHERE m.channel_id = $1 AND m.ts > $2 AND m.parent_user_id = ''
-                ORDER BY m.ts ASC LIMIT $3
-	            ",
-                channel_id,
-                since_timestamp,
-                *msgs_per_page as i64
-            )
+            DBParentMessage,
+            "
+            SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+            id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
+            FROM messages as m
+            INNER JOIN users ON users.id = m.user_id
+            LEFT JOIN (
+                SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id
+                FROM messages
+                WHERE channel_id = $1
+                GROUP BY join_ts, parent_user_id
+            ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id
+            WHERE m.channel_id = $1 AND m.parent_user_id = ''
+            ORDER BY m.ts DESC LIMIT $2
+         ",
+            channel_id,
+            *msgs_per_page as i64
+        )
                 .fetch_all(&self.tummy_conn_pool)
                 .await?
         };
         Ok(fetched_messages
-            .into_iter()
+            .into_iter().rev()
             .map(Message::from)
             .collect())
     }
+
 
     pub async fn get_user_info(&self, user_id: &str) -> Result<User, sqlx::Error> {
         let user = query_as!(DBUser, "SELECT * FROM users WHERE id = $1", user_id)
