@@ -1,6 +1,6 @@
 use serde::Serialize;
 use crate::{
-    dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
+    db::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
     tummy::SlackDateTime,
 };
 use sqlx::types::chrono;
@@ -119,6 +119,7 @@ impl From<DBUser> for User {
     }
 }
 
+#[derive(Serialize)]
 pub struct Channel {
     pub id: String,
     pub name: String,

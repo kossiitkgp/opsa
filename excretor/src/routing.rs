@@ -107,12 +107,8 @@ mod handlers {
     use crate::tummy::SlackDateTime;
     use askama::Template;
     use axum::extract::{Form, Path, Query, State};
-    use axum::response::IntoResponse;
-    use axum::{
-        body::Body,
-        http::StatusCode,
-        response::{Html, Response},
-    };
+    use axum::response::{IntoResponse};
+    use axum::{body::Body, http::StatusCode, response::{Html, Response}, Json};
     use axum_extra::extract::cookie::{Cookie, CookieJar};
     use cookie::time::Duration;
     use hmac::{Hmac, Mac};
@@ -194,14 +190,12 @@ mod handlers {
             .await?;
         Ok((
             StatusCode::OK,
-            Html(
+            Json(
                 templates::SearchResultsTemplate {
                     messages,
                     query: payload.query,
                 }
-                .render()?,
-            )
-            .into_response(),
+            ).into_response()
         ))
     }
 
@@ -231,7 +225,7 @@ mod handlers {
         let channel = state.tummy.get_channel_info(&channel).await?;
         let messages = state
             .tummy
-            .fetch_msg_page(&channel.id, &None, &10, &chrono::NaiveDateTime::UNIX_EPOCH)
+            .fetch_msg_page(&channel.id, &None, &10, &chrono::DateTime::UNIX_EPOCH.naive_utc())
             .await?;
 
         let channel_id = channel.id.clone();
@@ -243,7 +237,7 @@ mod handlers {
                 last_msg_timestamp: if let Some(last_msg) = messages.last() {
                     last_msg.timestamp.to_string()
                 } else {
-                    chrono::NaiveDateTime::UNIX_EPOCH.to_string()
+                    chrono::DateTime::UNIX_EPOCH.naive_utc().to_string()
                 },
                 messages, 
                 channel_id,
@@ -270,14 +264,14 @@ mod handlers {
                     .since
                     .as_ref()
                     .map(|ts| chrono::NaiveDateTime::from_pg_ts(ts))
-                    .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH),
+                    .unwrap_or(chrono::DateTime::UNIX_EPOCH.naive_utc()),
             )
             .await?;
 
         let new_last_msg_timestamp = messages
             .last()
             .map(|message| message.timestamp)
-            .unwrap_or(chrono::NaiveDateTime::UNIX_EPOCH);
+            .unwrap_or(chrono::DateTime::UNIX_EPOCH.naive_utc());
 
         Ok((
             StatusCode::OK,

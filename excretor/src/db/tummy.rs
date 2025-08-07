@@ -5,12 +5,9 @@ use sqlx::{
     PgPool,
 };
 use std::time::Duration;
-
-use crate::{
-    dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser},
-    env::EnvVars,
-    models::{self, Channel, Message, User},
-};
+use super::dbmodels::{DBChannel, DBReply, DBParentMessage, DBUser};
+use crate::env::EnvVars;
+use crate::types::{User, Channel, Message};
 
 #[derive(Clone)]
 pub struct Tummy {
@@ -59,13 +56,13 @@ impl Tummy {
     }
 
     pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
-        let db_channels = query_as!(DBChannel, 
+        let db_channels = query_as!(DBChannel,
             "SELECT * FROM channels ORDER BY name ASC"
         )
             .fetch_all(&self.tummy_conn_pool)
             .await?;
 
-        Ok(db_channels.into_iter().map(models::Channel::from).collect())
+        Ok(db_channels.into_iter().map(Channel::from).collect())
     }
 
     pub async fn get_channel_info(&self, channel_name: &str) -> Result<Channel, sqlx::Error> {
@@ -74,8 +71,8 @@ impl Tummy {
             "SELECT * FROM channels WHERE name = $1",
             channel_name
         )
-        .fetch_one(&self.tummy_conn_pool)
-        .await?;
+            .fetch_one(&self.tummy_conn_pool)
+            .await?;
         Ok(channel.into())
     }
 
@@ -102,7 +99,7 @@ impl Tummy {
                 LIMIT $2
                 "#, query_text, limit, channel_id, user_id
             ).fetch_all(&self.tummy_conn_pool)
-            .await?,
+                .await?,
             (Some(channel_id), None) => query_as!(
                 DBReply,
                 r#"
@@ -118,7 +115,7 @@ impl Tummy {
                 LIMIT $2
                 "#, query_text, limit, channel_id
             ).fetch_all(&self.tummy_conn_pool)
-            .await?,
+                .await?,
             (None, Some(user_id)) => query_as!(
                 DBReply,
                 r#"
@@ -134,7 +131,7 @@ impl Tummy {
                 LIMIT $2
                 "#, query_text, limit, user_id
             ).fetch_all(&self.tummy_conn_pool)
-            .await?,
+                .await?,
             (None, None) => query_as!(
                 DBReply,
                 r#"
@@ -149,9 +146,9 @@ impl Tummy {
                 LIMIT $2
                 "#, query_text, limit
             ).fetch_all(&self.tummy_conn_pool)
-            .await?,
+                .await?,
         };
-        Ok(messages.into_iter().map(models::Message::from).collect())
+        Ok(messages.into_iter().map(Message::from).collect())
     }
 
     pub async fn fetch_replies(
@@ -163,7 +160,7 @@ impl Tummy {
         let replies = query_as!(
             DBReply,
             r#"
-            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id, 
+            SELECT channel_id, user_id, msg_text, ts, thread_ts, parent_user_id,
             id, name, real_name, display_name, image_url, email, deleted, is_bot
             FROM messages
             INNER JOIN users ON users.id = messages.user_id
@@ -174,9 +171,9 @@ impl Tummy {
             channel_id,
             user_id
         )
-        .fetch_all(&self.tummy_conn_pool)
-        .await?;
-        Ok(replies.into_iter().map(models::Message::from).collect())
+            .fetch_all(&self.tummy_conn_pool)
+            .await?;
+        Ok(replies.into_iter().map(Message::from).collect())
     }
 
     pub async fn fetch_msg_page(
@@ -208,13 +205,13 @@ impl Tummy {
                 timestamp,
                 *msgs_per_page as i64
             )
-            .fetch_all(&self.tummy_conn_pool)
-            .await?
+                .fetch_all(&self.tummy_conn_pool)
+                .await?
         } else {
             query_as!(
                 DBParentMessage,
                 "
-                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id, 
+                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
                 id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt
                 FROM messages as m
                 INNER JOIN users ON users.id = m.user_id
@@ -231,12 +228,12 @@ impl Tummy {
                 since_timestamp,
                 *msgs_per_page as i64
             )
-            .fetch_all(&self.tummy_conn_pool)
-            .await?
+                .fetch_all(&self.tummy_conn_pool)
+                .await?
         };
         Ok(fetched_messages
             .into_iter()
-            .map(models::Message::from)
+            .map(Message::from)
             .collect())
     }
 

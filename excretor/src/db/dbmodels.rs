@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DBParentMessage {
     pub channel_id: String,
     pub user_id: String,
@@ -19,7 +19,7 @@ pub struct DBParentMessage {
     pub cnt: Option<i64>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DBReply {
     pub channel_id: String,
     pub user_id: String,
@@ -37,7 +37,7 @@ pub struct DBReply {
     pub is_bot: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DBChannel {
     pub id: String,
     pub name: String,
@@ -45,7 +45,7 @@ pub struct DBChannel {
     pub purpose: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DBUser {
     pub id: String,
     pub name: String,

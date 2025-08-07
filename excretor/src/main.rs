@@ -6,6 +6,9 @@ mod models;
 mod routing;
 mod templates;
 mod tummy;
+mod db;
+mod api;
+mod types;
 
 use tracing::info;
 

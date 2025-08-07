@@ -1,5 +1,6 @@
 use crate::models::{Channel, Message};
 use askama::Template;
+use serde::Serialize;
 
 #[derive(Template)]
 #[template(path = "base.html")]

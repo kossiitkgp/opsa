@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id, \n                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt\n                FROM messages as m\n                INNER JOIN users ON users.id = m.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id\n                WHERE m.channel_id = $1 AND m.ts > $2 AND m.ts > $3 AND m.parent_user_id = ''\n                ORDER BY ts ASC LIMIT $4\n                ",
+  "query": "\n                SELECT m.channel_id, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,\n                id, name, real_name, display_name, image_url, email, deleted, is_bot, c.cnt\n                FROM messages as m\n                INNER JOIN users ON users.id = m.user_id\n                LEFT JOIN (\n                    SELECT COUNT(*) as cnt, thread_ts as join_ts, parent_user_id\n                    FROM messages\n                    WHERE channel_id = $1\n                    GROUP BY join_ts, parent_user_id\n                ) as c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id\n                WHERE m.channel_id = $1 AND m.ts > $2 AND m.ts > $3 AND m.parent_user_id = ''\n                ORDER BY ts ASC LIMIT $4\n                ",
   "describe": {
     "columns": [
       {
@@ -105,5 +105,5 @@
       null
     ]
   },
-  "hash": "e25d4359647439a8f24e0d441217f4cc32ee2aeefcfe53f5980e5373e366066b"
+  "hash": "7245b12508bbe84e44d23534063bbe7e9ccc415ef5a370c882f7568bc20e19c1"
 }
