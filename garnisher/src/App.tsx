@@ -31,7 +31,7 @@ const App = () => {
         channels: `${API_BASE_URL}/api/channels`, // Example: GET /api/channels -> { channels: [{id, name, topic, purpose}] }
         channelDetail: (channelId) => `${API_BASE_URL}/api/channels/${channelId}`, // GET -> { channel: { ... }, messages: [{...}], last_msg_timestamp: "..." }
         messages: (channelId, lastTimestamp) => `${API_BASE_URL}/api/messages/${channelId}?last_msg_timestamp=${lastTimestamp}&per_page=10`, // GET,
-        replies: (ts, userId, channelId) => `${API_BASE_URL}/replies?ts=${ts}&user_id=${userId}&channel_id=${channelId}`, // GET
+        replies: (ts, userId, channelId) => `${API_BASE_URL}/api/replies?ts=${ts}&user_id=${userId}&channel_id=${channelId}`, // GET
         search: `${API_BASE_URL}/search`, // POST with body: { query: '...' }
     };
 
@@ -149,9 +149,11 @@ const App = () => {
             const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, selectedChannel.id));
             if (!response.ok) throw new Error('Failed to fetch replies.');
             const data = await response.json();
+            // The API response for replies contains a 'messages' key with the array of replies.
+            // We need to access that specific key.
             setSelectedThread({
                 parentMessage: message,
-                replies: data
+                replies: data.messages
             });
         } catch (err) {
             setError(err.message);
