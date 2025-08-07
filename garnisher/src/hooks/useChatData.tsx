@@ -48,6 +48,8 @@ export const useChatData = (appTitle: string) => {
         setMessages([]);
         setOldestMessageTimestamp(null);
         setAllMessagesLoaded(false);
+        // Explicitly reset the scroll height ref when changing channels.
+        previousScrollHeightRef.current = null;
 
         const fetchChannelAndMessages = async () => {
             setIsLoading(true);
@@ -75,28 +77,39 @@ export const useChatData = (appTitle: string) => {
         fetchChannelAndMessages();
     }, [selectedChannel?.id]);
 
-    // Handle scroll position after new messages are loaded
+    /**
+     * FIX: This effect now correctly handles scrolling.
+     * It runs whenever the `messages` array changes.
+     * - If `previousScrollHeightRef` is set, it means we're loading old messages, so it preserves the scroll position.
+     * - Otherwise, it's a new channel load, and it scrolls to the bottom.
+     * The dependency array is changed from `[messages, oldestMessageTimestamp]` to just `[messages]`.
+     */
     useEffect(() => {
         if (!messageListRef.current || messages.length === 0) return;
+
         if (previousScrollHeightRef.current !== null) {
+            // We're loading older messages, so restore the scroll position.
             setTimeout(() => {
-                const newScrollHeight = messageListRef.current!.scrollHeight;
-                const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
-                messageListRef.current!.scrollTop += heightDifference;
-                previousScrollHeightRef.current = null;
+                if (messageListRef.current) {
+                    const newScrollHeight = messageListRef.current.scrollHeight;
+                    const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
+                    messageListRef.current.scrollTop = heightDifference;
+                    previousScrollHeightRef.current = null; // Reset after use.
+                }
             }, 0);
         } else {
-            if (oldestMessageTimestamp === null) {
-                messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-            }
+            // This is a fresh load (e.g., new channel), so scroll to the bottom.
+            messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
         }
-    }, [messages, oldestMessageTimestamp]);
+    }, [messages]);
 
     // Function to handle fetching older messages
     const fetchOlderMessages = async (channelId: string, timestamp: string | null) => {
         if (isLoading || (timestamp && allMessagesLoaded)) return;
         setIsLoading(true);
         try {
+            // Before fetching, store the current scroll height. This is the signal
+            // that we are loading older messages.
             if (messageListRef.current) {
                 previousScrollHeightRef.current = messageListRef.current.scrollHeight;
             }
@@ -159,8 +172,6 @@ export const useChatData = (appTitle: string) => {
 
     const handleRepliesClick = async (message: MessageType) => {
         setIsLoading(true);
-        // *** FIX: Do NOT change the main view state when opening a thread. ***
-        // setView('thread'); // This was the problem.
         try {
             const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, message.channel_id));
             if (!response.ok) throw new Error('Failed to fetch replies.');
@@ -176,8 +187,6 @@ export const useChatData = (appTitle: string) => {
 
     const closeThread = () => {
         setSelectedThread(null);
-        // *** FIX: Do NOT reset the view. This preserves the main content area. ***
-        // setView('channels'); // This was also a problem.
     };
 
     const closeSearchResults = () => {
