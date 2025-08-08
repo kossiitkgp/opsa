@@ -64,6 +64,14 @@ impl Tummy {
         Ok(db_channels.into_iter().map(Channel::from).collect())
     }
 
+    pub async fn get_all_users(&self) -> color_eyre::Result<Vec<User>> {
+        let db_channels = query_as!(DBUser, "SELECT * FROM users ORDER BY name ASC")
+            .fetch_all(&self.tummy_conn_pool)
+            .await?;
+
+        Ok(db_channels.into_iter().map(User::from).collect())
+    }
+
     pub async fn get_channel_info(&self, channel_id: &str) -> Result<Channel, sqlx::Error> {
         let channel = query_as!(
             DBChannel,
@@ -81,116 +89,229 @@ impl Tummy {
         channel_id: Option<&str>,
         user_id: Option<&str>,
         limit: i64,
-        similarity_threshold: f32,
+        _similarity_threshold: f32, // No longer used
     ) -> color_eyre::Result<Vec<SearchResult>> {
-        let messages = match (channel_id, user_id) {
-            (Some(channel_id), Some(user_id)) => query_as!(
-                DBSearchResult,
+        println!("RRF Search with User: {:?}, Channel: {:?}", user_id, channel_id);
+
+        let is_text_search = !query_text.trim().is_empty();
+        if !is_text_search {
+            // If there's no text, we'll return a simple list of recent messages,
+            // applying channel and user filters if they exist.
+            let mut builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new(
                 r#"
-                SELECT
-                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
-                    c.cnt,
-                    parent_m.msg_text as "parent_msg_text?",
-                    parent_u.name as "parent_name?",
-                    parent_u.real_name as "parent_real_name?",
-                    parent_u.display_name as "parent_display_name?",
-                    parent_u.image_url as "parent_image_url?",
-                    parent_u.email as "parent_email?",
-                    parent_u.deleted as "parent_deleted?",
-                    parent_u.is_bot as "parent_is_bot?"
-                FROM messages AS m
-                INNER JOIN users AS u ON u.id = m.user_id
-                INNER JOIN channels AS channel ON channel.id = m.channel_id
-                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
-                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
-                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
-                WHERE similarity(m.msg_text, $1) > $5 AND m.channel_id = $3 AND m.user_id = $4
-                ORDER BY similarity(m.msg_text, $1) DESC
-                LIMIT $2
-                "#, query_text, limit, channel_id, user_id, similarity_threshold
-            ).fetch_all(&self.tummy_conn_pool).await?,
-            (Some(channel_id), None) => query_as!(
-                DBSearchResult,
-                r#"
-                SELECT
-                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
-                    c.cnt,
-                    parent_m.msg_text as "parent_msg_text?",
-                    parent_u.name as "parent_name?",
-                    parent_u.real_name as "parent_real_name?",
-                    parent_u.display_name as "parent_display_name?",
-                    parent_u.image_url as "parent_image_url?",
-                    parent_u.email as "parent_email?",
-                    parent_u.deleted as "parent_deleted?",
-                    parent_u.is_bot as "parent_is_bot?"
-                FROM messages AS m
-                INNER JOIN users AS u ON u.id = m.user_id
-                INNER JOIN channels AS channel ON channel.id = m.channel_id
-                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
-                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
-                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
-                WHERE similarity(m.msg_text, $1) > $4 AND m.channel_id = $3
-                ORDER BY similarity(m.msg_text, $1) DESC
-                LIMIT $2
-                "#, query_text, limit, channel_id, similarity_threshold
-            ).fetch_all(&self.tummy_conn_pool).await?,
-            (None, Some(user_id)) => query_as!(
-                DBSearchResult,
-                r#"
-                SELECT
-                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
-                    c.cnt,
-                    parent_m.msg_text as "parent_msg_text?",
-                    parent_u.name as "parent_name?",
-                    parent_u.real_name as "parent_real_name?",
-                    parent_u.display_name as "parent_display_name?",
-                    parent_u.image_url as "parent_image_url?",
-                    parent_u.email as "parent_email?",
-                    parent_u.deleted as "parent_deleted?",
-                    parent_u.is_bot as "parent_is_bot?"
-                FROM messages AS m
-                INNER JOIN users AS u ON u.id = m.user_id
-                INNER JOIN channels AS channel ON channel.id = m.channel_id
-                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
-                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
-                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
-                WHERE similarity(m.msg_text, $1) > $4 AND m.user_id = $3
-                ORDER BY similarity(m.msg_text, $1) DESC
-                LIMIT $2
-                "#, query_text, limit, user_id, similarity_threshold
-            ).fetch_all(&self.tummy_conn_pool).await?,
-            (None, None) => query_as!(
-                DBSearchResult,
-                r#"
-                SELECT
-                    m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
-                    u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
-                    c.cnt,
-                    parent_m.msg_text as "parent_msg_text?",
-                    parent_u.name as "parent_name?",
-                    parent_u.real_name as "parent_real_name?",
-                    parent_u.display_name as "parent_display_name?",
-                    parent_u.image_url as "parent_image_url?",
-                    parent_u.email as "parent_email?",
-                    parent_u.deleted as "parent_deleted?",
-                    parent_u.is_bot as "parent_is_bot?"
-                FROM messages AS m
-                INNER JOIN users AS u ON u.id = m.user_id
-                INNER JOIN channels AS channel ON channel.id = m.channel_id
-                LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
-                LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
-                LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
-                WHERE similarity(m.msg_text, $1) > $3
-                ORDER BY similarity(m.msg_text, $1) DESC
-                LIMIT $2
-                "#, query_text, limit, similarity_threshold
-            ).fetch_all(&self.tummy_conn_pool).await?,
+            SELECT
+                m.channel_id,
+                c.name AS channel_name,
+                m.user_id,
+                m.msg_text,
+                m.ts,
+                m.thread_ts,
+                m.parent_user_id,
+                u.id,
+                u.name,
+                u.real_name,
+                u.display_name,
+                u.image_url,
+                u.email,
+                u.deleted,
+                u.is_bot,
+                (SELECT COUNT(*) FROM messages WHERE thread_ts = m.ts) as cnt,
+                NULL as parent_msg_text,
+                NULL as parent_name,
+                NULL as parent_real_name,
+                NULL as parent_display_name,
+                NULL as parent_image_url,
+                NULL as parent_email,
+                NULL as parent_deleted,
+                NULL as parent_is_bot
+            FROM
+                messages m
+            INNER JOIN
+                users u ON u.id = m.user_id
+            INNER JOIN
+                channels c ON c.id = m.channel_id
+            "#,
+            );
+            builder.push(" WHERE m.parent_user_id IS NULL OR m.parent_user_id = ''");
+
+            if let Some(cid) = channel_id {
+                builder.push(" AND m.channel_id = ");
+                builder.push_bind(cid);
+            }
+            if let Some(uid) = user_id {
+                builder.push(" AND m.user_id = ");
+                builder.push_bind(uid);
+            }
+
+            builder.push(" ORDER BY m.ts DESC LIMIT ");
+            builder.push_bind(limit);
+
+            let query = builder.build_query_as::<crate::db::dbmodels::DBSearchResult>();
+            let recent_messages = query.fetch_all(&self.tummy_conn_pool).await?;
+
+            return Ok(recent_messages.into_iter().map(SearchResult::from).collect());
+        }
+
+        // Sanitize the input to prevent tsquery syntax errors.
+        // We replace characters that have special meaning in tsquery with spaces.
+        let sanitized_query_text = query_text
+            .replace(":", " ")
+            .replace("&", " ")
+            .replace("|", " ")
+            .replace("!", " ")
+            .replace("(", " ")
+            .replace(")", " ");
+
+        // Split the sanitized text into words for building the tsquery.
+        let search_terms: Vec<&str> = sanitized_query_text.split_whitespace().collect();
+
+        // Prepare tsquery strings for full-text and partial search
+        // The full text query joins all terms with the 'and' operator.
+        let full_text_query = search_terms.join(" & ");
+
+        // The partial text query applies the prefix search operator only to the last term.
+        // This is a common and robust way to handle partial matching.
+        let partial_text_query = if search_terms.len() > 1 {
+            let mut partial_query = search_terms[0..search_terms.len() - 1].join(" & ");
+            partial_query.push_str(&format!(" & {}:*", search_terms.last().unwrap()));
+            partial_query
+        } else {
+            format!("{}:*", search_terms.first().unwrap_or(&""))
         };
+
+        // --- Main Query Builder ---
+        let mut builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new("WITH ");
+
+        // --- 1. Fuzzy (Trigram) Search CTE ---
+        builder.push(r#"
+    fuzzy AS (
+        SELECT
+            ts,
+            similarity(msg_text, "#);
+        builder.push_bind(query_text);
+        builder.push(r#") as sim_score,
+            row_number() OVER (ORDER BY similarity(msg_text, "#);
+        builder.push_bind(query_text);
+        builder.push(r#") DESC) as rank_ix
+        FROM messages
+        WHERE msg_text %> "#);
+        builder.push_bind(query_text);
+        if let Some(cid) = channel_id {
+            builder.push(" AND channel_id = ");
+            builder.push_bind(cid);
+        }
+        if let Some(uid) = user_id {
+            builder.push(" AND user_id = ");
+            builder.push_bind(uid);
+        }
+        builder.push(r#"
+        ORDER BY rank_ix
+        LIMIT 30
+    ),
+"#);
+
+        // --- 2. Full-Text Search CTE ---
+        builder.push(r#"
+    full_text AS (
+        SELECT
+            ts,
+            ts_rank_cd(msg_tsv, to_tsquery('english', "#);
+        builder.push_bind(&full_text_query);
+        builder.push(r#")) as rank_score,
+            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('english', "#);
+        builder.push_bind(&full_text_query);
+        builder.push(r#")) DESC) as rank_ix
+        FROM messages
+        WHERE msg_tsv @@ to_tsquery('english', "#);
+        builder.push_bind(&full_text_query);
+        builder.push(r#")"#);
+        if let Some(cid) = channel_id {
+            builder.push(" AND channel_id = ");
+            builder.push_bind(cid);
+        }
+        if let Some(uid) = user_id {
+            builder.push(" AND user_id = ");
+            builder.push_bind(uid);
+        }
+        builder.push(r#"
+        ORDER BY rank_ix
+        LIMIT 30
+    ),
+"#);
+
+        // --- 3. Partial (Prefix) Search CTE ---
+        builder.push(r#"
+    partial_search AS (
+        SELECT
+            ts,
+            ts_rank_cd(msg_tsv, to_tsquery('simple', "#);
+        builder.push_bind(&partial_text_query);
+        builder.push(r#")) as rank_score,
+            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('simple', "#);
+        builder.push_bind(&partial_text_query);
+        builder.push(r#")) DESC) as rank_ix
+        FROM messages
+        WHERE msg_tsv @@ to_tsquery('simple', "#);
+        builder.push_bind(&partial_text_query);
+        builder.push(r#")"#);
+        if let Some(cid) = channel_id {
+            builder.push(" AND channel_id = ");
+            builder.push_bind(cid);
+        }
+        if let Some(uid) = user_id {
+            builder.push(" AND user_id = ");
+            builder.push_bind(uid);
+        }
+        builder.push(r#"
+        LIMIT 30
+    )
+"#);
+
+        // --- Final Selection and RRF ---
+        builder.push(r#"
+    SELECT
+        m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
+        u.id, u.name, u.real_name, u.display_name, u.image_url, u.email, u.deleted, u.is_bot,
+        c.cnt,
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_m.msg_text ELSE NULL END as "parent_msg_text",
+        CASE WHEN parent_u.is_bot IS NOT NULL THEN parent_u.name ELSE NULL END as "parent_name",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.real_name ELSE NULL END as "parent_real_name",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.display_name ELSE NULL END as "parent_display_name",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.image_url ELSE NULL END as "parent_image_url",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.email ELSE NULL END as "parent_email",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.deleted ELSE NULL END as "parent_deleted",
+        CASE WHEN parent_u.id IS NOT NULL THEN parent_u.is_bot ELSE NULL END as "parent_is_bot"
+    FROM
+        fuzzy
+        FULL OUTER JOIN full_text ON fuzzy.ts = full_text.ts
+        FULL OUTER JOIN partial_search ON COALESCE(fuzzy.ts, full_text.ts) = partial_search.ts
+        JOIN messages m ON COALESCE(fuzzy.ts, full_text.ts, partial_search.ts) = m.ts
+        INNER JOIN users AS u ON u.id = m.user_id
+        INNER JOIN channels AS channel ON channel.id = m.channel_id
+        LEFT JOIN (SELECT COUNT(*) as cnt, thread_ts FROM messages WHERE parent_user_id != '' GROUP BY thread_ts) AS c ON m.thread_ts = c.thread_ts
+        LEFT JOIN messages AS parent_m ON m.thread_ts = parent_m.ts AND parent_m.parent_user_id = ''
+        LEFT JOIN users AS parent_u ON parent_m.user_id = parent_u.id
+    ORDER BY
+        -- Reciprocal Rank Fusion (RRF)
+        -- The k value (e.g., 60) and weights can be tuned.
+        COALESCE(1.0 / (60 + fuzzy.rank_ix), 0.0) * 1.0 +
+        COALESCE(1.0 / (60 + full_text.rank_ix), 0.0) * 1.0 +
+        COALESCE(1.0 / (60 + partial_search.rank_ix), 0.0) * 1.0
+        DESC
+"#);
+
+        builder.push(" LIMIT ");
+        builder.push_bind(limit);
+
+        println!("Final SQL Query: {}", builder.sql());
+
+        let query = builder.build_query_as::<DBSearchResult>();
+        let messages = query.fetch_all(&self.tummy_conn_pool).await?;
+
         Ok(messages.into_iter().map(SearchResult::from).collect())
     }
+
+
 
     pub async fn fetch_replies(
         &self,

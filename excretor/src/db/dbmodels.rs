@@ -110,7 +110,7 @@ pub struct DBReply {
 
 /// Represents a search result, which could be a parent message or a reply.
 /// If it's a reply, it includes information about the parent message.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DBSearchResult {
     pub channel_id: String,
     pub channel_name: String,

@@ -1,9 +1,14 @@
-use crate::types::{Channel, Message, SearchResult};
+use crate::types::{Channel, Message, SearchResult, User};
 use serde::{Serialize};
 
 #[derive(Serialize)]
 pub struct ChannelsResponse {
     pub channels: Vec<Channel>,
+}
+
+#[derive(Serialize)]
+pub struct UsersResponse {
+    pub users: Vec<User>,
 }
 
 #[derive(Serialize)]

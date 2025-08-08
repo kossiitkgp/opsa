@@ -4,11 +4,13 @@
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use axum::Json;
 use axum::response::Response;
 use tokio_util::io::ReaderStream;
 use crate::api::routes::RouterState;
 use crate::api::errors::AppError;
 use axum::response::IntoResponse;
+use crate::api::models::{ChannelsResponse, UsersResponse};
 
 /// Serves static asset files from the configured directory.
 ///
@@ -56,4 +58,18 @@ pub async fn assets(
 /// Returns a placeholder response for the React app with HTTP 200 OK.
 pub async fn serve_react_app() -> Result<(StatusCode, Response), AppError> {
     Ok((StatusCode::OK, "Hello app!".into_response()))
+}
+
+pub async fn get_users(
+    State(state): State<RouterState>,
+) -> Result<(StatusCode, Response), AppError> {
+    let users = state.tummy.get_all_users().await?;
+    Ok((
+        StatusCode::OK,
+        Json(
+            UsersResponse {
+                users,
+            }
+        ).into_response(),
+    ))
 }

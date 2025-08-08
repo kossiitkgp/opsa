@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Channel, Message as MessageType, MessageThread, SearchResult, ViewState } from "../types";
+import type { Channel, Message as MessageType, MessageThread, SearchResult, ViewState, User } from "../types";
 import { API_ENDPOINTS } from '../api';
 
 export const useChatData = (appTitle: string) => {
@@ -14,11 +14,12 @@ export const useChatData = (appTitle: string) => {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState<boolean>(false);
+    const [users, setUsers] = useState<User[]>([]);
 
     const messageListRef = useRef<HTMLDivElement>(null);
     const previousScrollHeightRef = useRef<number | null>(null);
 
-    // Initial fetch of channels on component mount
+    // Initial fetch of channels and users on component mount
     useEffect(() => {
         const fetchChannels = async () => {
             setIsLoading(true);
@@ -39,7 +40,23 @@ export const useChatData = (appTitle: string) => {
                 setIsLoading(false);
             }
         };
+
+        const fetchUsers = async () => {
+            try {
+                const response = await fetch(API_ENDPOINTS.users);
+                if (!response.ok) throw new Error('Failed to fetch users.');
+                const data = await response.json();
+                if (data.users) {
+                    setUsers(data.users);
+                }
+            } catch (err: any) {
+                console.error("Failed to fetch users:", err.message);
+                // Optionally set an error state specific to users or a general one
+            }
+        };
+
         fetchChannels();
+        fetchUsers();
     }, []);
 
     // Fetch messages for the selected channel whenever it changes
@@ -48,7 +65,6 @@ export const useChatData = (appTitle: string) => {
         setMessages([]);
         setOldestMessageTimestamp(null);
         setAllMessagesLoaded(false);
-        // Explicitly reset the scroll height ref when changing channels.
         previousScrollHeightRef.current = null;
 
         const fetchChannelAndMessages = async () => {
@@ -138,13 +154,28 @@ export const useChatData = (appTitle: string) => {
     // Event handlers and utility functions
     const handleLogin = () => setIsLoggedIn(true);
 
-    const handleSearch = async (query: string) => {
-        if (!query) return;
+    const handleSearch = async (params: { query: string; channelId: string | null; userId: string | null }) => {
+        const { query, channelId, userId } = params;
+
+        // A search is valid if there's a query or at least one filter
+        if (!query && !channelId && !userId) {
+            setSearchResults([]);
+            setView('channels'); // Or show a message "Please enter a search query or filter"
+            return;
+        }
+
         setIsLoading(true);
         setView('search');
         try {
             const formData = new URLSearchParams();
             formData.append('query', query);
+            if (channelId) {
+                formData.append('channel_id', channelId);
+            }
+            if (userId) {
+                formData.append('user_id', userId);
+            }
+
             const response = await fetch(API_ENDPOINTS.search, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -216,6 +247,7 @@ export const useChatData = (appTitle: string) => {
         appTitle,
         allMessagesLoaded,
         messageListRef,
+        users,
         handleSearch,
         handleChannelClick,
         handleRepliesClick,

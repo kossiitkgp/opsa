@@ -6,4 +6,5 @@ export const API_ENDPOINTS = {
     replies: (ts: number, userId: string, channelId: string) =>
         `/api/replies?ts=${ts}&user_id=${userId}&channel_id=${channelId}`,
     search: `/api/search`,
+    users: `/api/users`,
 };
