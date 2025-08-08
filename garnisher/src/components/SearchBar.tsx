@@ -12,6 +12,9 @@ interface SearchBarProps {
     }) => void;
     users: User[];
     channels: Channel[];
+    // Optional prop to control dynamic search behavior
+    enableDynamicSearch?: boolean;
+    dynamicSearchDelay?: number; // Delay in milliseconds for debouncing
 }
 
 type Suggestion = {
@@ -21,7 +24,13 @@ type Suggestion = {
     displayName?: string;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({
+                                                        onSearch,
+                                                        users,
+                                                        channels,
+                                                        enableDynamicSearch = true,
+                                                        dynamicSearchDelay = 500
+                                                    }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [activeSuggestion, setActiveSuggestion] = useState(0);
@@ -36,6 +45,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
     const beforeDateInputRef = useRef<HTMLInputElement>(null);
     const afterDateInputRef = useRef<HTMLInputElement>(null);
 
+    // Ref for dynamic search debouncing
+    const dynamicSearchTimeoutRef = useRef<number | null>(null);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -49,6 +61,30 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    // Dynamic search effect - triggers search while typing when no suggestions are visible
+    useEffect(() => {
+        if (!enableDynamicSearch) return;
+
+        // Clear any existing timeout
+        if (dynamicSearchTimeoutRef.current) {
+            clearTimeout(dynamicSearchTimeoutRef.current);
+        }
+
+        // Only trigger dynamic search if there are no suggestions visible
+        if (suggestions.length === 0 && query.trim()) {
+            dynamicSearchTimeoutRef.current = setTimeout(() => {
+                handleSearchSubmit();
+            }, dynamicSearchDelay);
+        }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (dynamicSearchTimeoutRef.current) {
+                clearTimeout(dynamicSearchTimeoutRef.current);
+            }
+        };
+    }, [query, suggestions.length, beforeDate, afterDate, enableDynamicSearch, dynamicSearchDelay]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -102,6 +138,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
     };
 
     const handleSearchSubmit = () => {
+        // Clear any pending dynamic search
+        if (dynamicSearchTimeoutRef.current) {
+            clearTimeout(dynamicSearchTimeoutRef.current);
+            dynamicSearchTimeoutRef.current = null;
+        }
+
         const channelRegex = /in:#(\S+)/;
         const userRegex = /from:@(\S+)/;
 
@@ -193,7 +235,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
         <div className="relative flex-1" ref={searchContainerRef}>
             {/* Main search bar */}
             <div className="flex items-center space-x-2 bg-gray-700 text-gray-200 rounded-lg p-2">
-                <Search className="text-gray-400 flex-shrink-0" />
+                <Search className={`flex-shrink-0 transition-colors duration-200 ${
+                    suggestions.length === 0 && enableDynamicSearch && query.trim()
+                        ? 'text-blue-400 animate-pulse'
+                        : 'text-gray-400'
+                }`} />
                 <input
                     className="flex-1 bg-gray-700 text-gray-200 focus:outline-none min-w-0"
                     type="text"
@@ -202,6 +248,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                 />
+
+                {/* Dynamic search indicator */}
+                {enableDynamicSearch && suggestions.length === 0 && query.trim() && (
+                    <div className="text-xs text-blue-400 px-2 py-1 rounded bg-blue-900/20 border border-blue-700/30">
+                        Auto-searching...
+                    </div>
+                )}
 
                 {/* Date picker buttons */}
                 <div className="flex items-center space-x-1 flex-shrink-0">

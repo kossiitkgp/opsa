@@ -71,7 +71,7 @@ pub async fn search(
             &payload.query,
             payload.channel_id.as_deref(),
             payload.user_id.as_deref(),
-            10,
+            30,
             payload.before.map(|ts| {NaiveDateTime::from_pg_ts(&ts)}),
             payload.after.map(|ts| {NaiveDateTime::from_pg_ts(&ts)})
         )

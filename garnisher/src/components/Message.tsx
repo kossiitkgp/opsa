@@ -3,6 +3,7 @@ import type { Message as MessageType } from "../types";
 
 interface MessageProps {
     message: MessageType;
+    isParentInThread?: boolean;
     onRepliesClick?: (message: MessageType) => void;
 }
 
