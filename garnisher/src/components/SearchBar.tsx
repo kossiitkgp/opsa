@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Channel } from "../types";
-import { Search } from 'lucide-react';
+import { Search, Calendar, CalendarCheck, X } from 'lucide-react';
 
 interface SearchBarProps {
-    onSearch: (params: { query: string; channelId: string | null; userId: string | null }) => void;
+    onSearch: (params: {
+        query: string;
+        channelId: string | null;
+        userId: string | null;
+        before: Date | null;
+        after: Date | null;
+    }) => void;
     users: User[];
     channels: Channel[];
 }
@@ -21,10 +27,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
     const [activeSuggestion, setActiveSuggestion] = useState(0);
     const searchContainerRef = useRef<HTMLDivElement>(null);
 
+    // Enhanced state for date management
+    const [beforeDate, setBeforeDate] = useState<string | null>(null);
+    const [afterDate, setAfterDate] = useState<string | null>(null);
+    const [activePickerType, setActivePickerType] = useState<'before' | 'after' | null>(null);
+
+    // Refs for the date picker inputs
+    const beforeDateInputRef = useRef<HTMLInputElement>(null);
+    const afterDateInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
                 setSuggestions([]);
+                setActivePickerType(null);
             }
         };
 
@@ -33,7 +49,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -71,15 +86,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
 
     const handleSuggestionClick = (suggestion: Suggestion) => {
         const words = query.split(' ');
-        words.pop(); // Remove the partial word (e.g., "in:#gen")
+        words.pop();
 
-        const prefix = suggestion.type === 'channel' ? 'in:#' : 'from:@';
-        // For users, we'll autocomplete with their primary 'name' to ensure the parser finds it.
-        words.push(`${prefix}${suggestion.name}`);
+        let replacement = '';
+        if (suggestion.type === 'channel') {
+            replacement = `in:#${suggestion.name}`;
+        } else if (suggestion.type === 'user') {
+            replacement = `from:@${suggestion.name}`;
+        }
 
+        words.push(replacement);
         setQuery(words.join(' ') + ' ');
         setSuggestions([]);
-        // Focus the input after a suggestion is clicked
         searchContainerRef.current?.querySelector('input')?.focus();
     };
 
@@ -94,18 +112,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
         const userName = userMatch ? userMatch[1] : null;
 
         const channel = channelName ? channels.find(c => c.name === channelName) : null;
-        // The user can be found by their name, real_name, or display_name
         const user = userName ? users.find(u => u.name === userName || u.real_name === userName || u.display_name === userName) : null;
 
         const channelId = channel ? channel.id : null;
         const userId = user ? user.id : null;
+
+        const parsedBeforeDate = beforeDate ? new Date(beforeDate) : null;
+        const parsedAfterDate = afterDate ? new Date(afterDate) : null;
 
         const searchText = query
             .replace(channelRegex, '')
             .replace(userRegex, '')
             .trim();
 
-        onSearch({ query: searchText, channelId, userId });
+        onSearch({ query: searchText, channelId, userId, before: parsedBeforeDate, after: parsedAfterDate });
         setSuggestions([]);
     };
 
@@ -132,31 +152,167 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, users, channels 
         }
     };
 
+    const toggleBeforePicker = () => {
+        if (activePickerType === 'before') {
+            setActivePickerType(null);
+        } else {
+            setActivePickerType('before');
+            setTimeout(() => beforeDateInputRef.current?.showPicker(), 0);
+        }
+    };
+
+    const toggleAfterPicker = () => {
+        if (activePickerType === 'after') {
+            setActivePickerType(null);
+        } else {
+            setActivePickerType('after');
+            setTimeout(() => afterDateInputRef.current?.showPicker(), 0);
+        }
+    };
+
+    const clearBeforeDate = () => {
+        setBeforeDate(null);
+        setActivePickerType(null);
+    };
+
+    const clearAfterDate = () => {
+        setAfterDate(null);
+        setActivePickerType(null);
+    };
+
+    const formatDisplayDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
     return (
         <div className="relative flex-1" ref={searchContainerRef}>
-            <div className="flex items-center space-x-2">
-                <Search className="text-gray-400" />
+            {/* Main search bar */}
+            <div className="flex items-center space-x-2 bg-gray-700 text-gray-200 rounded-lg p-2">
+                <Search className="text-gray-400 flex-shrink-0" />
                 <input
-                    className="w-full bg-gray-700 text-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 bg-gray-700 text-gray-200 focus:outline-none min-w-0"
                     type="text"
-                    placeholder="Search with 'in:#channel' or 'from:@user'..."
+                    placeholder="Search with 'in:#channel' or 'from:@user'"
                     value={query}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                 />
+
+                {/* Date picker buttons */}
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                    {/* Before Date Picker */}
+                    <div className="relative">
+                        <button
+                            onClick={toggleBeforePicker}
+                            className={`p-2 rounded-lg transition-all duration-200 ${
+                                activePickerType === 'before'
+                                    ? 'bg-blue-600 text-white'
+                                    : beforeDate
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'hover:bg-gray-600 text-gray-400'
+                            }`}
+                            title="Select messages before this date"
+                        >
+                            {beforeDate ? <CalendarCheck size={16} /> : <Calendar size={16} />}
+                        </button>
+
+                        <input
+                            ref={beforeDateInputRef}
+                            type="date"
+                            value={beforeDate || ''}
+                            onChange={(e) => setBeforeDate(e.target.value)}
+                            className="absolute top-0 right-0 w-full h-full opacity-0 cursor-pointer"
+                            onBlur={() => setActivePickerType(null)}
+                        />
+                    </div>
+
+                    {/* After Date Picker */}
+                    <div className="relative">
+                        <button
+                            onClick={toggleAfterPicker}
+                            className={`p-2 rounded-lg transition-all duration-200 ${
+                                activePickerType === 'after'
+                                    ? 'bg-blue-600 text-white'
+                                    : afterDate
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'hover:bg-gray-600 text-gray-400'
+                            }`}
+                            title="Select messages after this date"
+                        >
+                            {afterDate ? <CalendarCheck size={16} /> : <Calendar size={16} />}
+                        </button>
+
+                        <input
+                            ref={afterDateInputRef}
+                            type="date"
+                            value={afterDate || ''}
+                            onChange={(e) => setAfterDate(e.target.value)}
+                            className="absolute top-0 right-0 w-full h-full opacity-0 cursor-pointer"
+                            onBlur={() => setActivePickerType(null)}
+                        />
+                    </div>
+                </div>
             </div>
+
+            {/* Date filter indicators */}
+            {(beforeDate || afterDate) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {beforeDate && (
+                        <div className="flex items-center bg-blue-600 text-white text-sm px-3 py-1 rounded-full">
+                            <span className="mr-2">Before: {formatDisplayDate(beforeDate)}</span>
+                            <button
+                                onClick={clearBeforeDate}
+                                className="text-white hover:text-gray-200 transition-colors"
+                                title="Clear before date filter"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+                    {afterDate && (
+                        <div className="flex items-center bg-green-600 text-white text-sm px-3 py-1 rounded-full">
+                            <span className="mr-2">After: {formatDisplayDate(afterDate)}</span>
+                            <button
+                                onClick={clearAfterDate}
+                                className="text-white hover:text-gray-200 transition-colors"
+                                title="Clear after date filter"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Active picker indicator */}
+            {activePickerType && (
+                <div className="absolute -bottom-8 left-0 right-0 text-center">
+                    <span className="bg-gray-800 text-gray-200 px-3 py-1 rounded-lg text-sm">
+                        Select {activePickerType} date
+                    </span>
+                </div>
+            )}
+
+            {/* Suggestions dropdown */}
             {suggestions.length > 0 && (
                 <ul className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden">
                     {suggestions.map((s, index) => (
                         <li
                             key={s.id}
-                            className={`px-4 py-3 cursor-pointer flex justify-between ${
+                            className={`px-4 py-3 cursor-pointer flex justify-between items-center ${
                                 index === activeSuggestion ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700'
                             }`}
                             onClick={() => handleSuggestionClick(s)}
                             onMouseOver={() => setActiveSuggestion(index)}
                         >
-                            <span>{s.type === 'channel' ? `#${s.name}` : `@${s.name}`}</span>
+                            <div className="flex items-center">
+                                <span>{s.type === 'channel' ? `#${s.name}` : s.type === 'user' ? `@${s.name}` : s.name}</span>
+                            </div>
                             {s.type === 'user' && s.displayName && <span className="text-slate-400">{s.displayName}</span>}
                         </li>
                     ))}

@@ -10,7 +10,7 @@ use tokio_util::io::ReaderStream;
 use crate::api::routes::RouterState;
 use crate::api::errors::AppError;
 use axum::response::IntoResponse;
-use crate::api::models::{ChannelsResponse, UsersResponse};
+use crate::api::models::{UsersResponse};
 
 /// Serves static asset files from the configured directory.
 ///

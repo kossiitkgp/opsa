@@ -13,13 +13,6 @@ interface SearchResultsProps {
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({ results, closeResults, onRepliesClick, isLoading, error }) => {
-    // --- Debugging Logs ---
-    console.log("--- SearchResults Component ---");
-    console.log("Is Loading:", isLoading);
-    console.log("Error:", error);
-    console.log("Results Received:", results);
-    console.log("Number of Results:", results.length);
-    console.log("-----------------------------");
 
     return (
         <div className="flex-1 overflow-y-auto p-6 bg-gray-800 text-white">

@@ -89,14 +89,13 @@ impl Tummy {
         channel_id: Option<&str>,
         user_id: Option<&str>,
         limit: i64,
-        _similarity_threshold: f32, // No longer used
+        before: Option<NaiveDateTime>,
+        after: Option<NaiveDateTime>,
     ) -> color_eyre::Result<Vec<SearchResult>> {
         println!("RRF Search with User: {:?}, Channel: {:?}", user_id, channel_id);
 
         let is_text_search = !query_text.trim().is_empty();
         if !is_text_search {
-            // If there's no text, we'll return a simple list of recent messages,
-            // applying channel and user filters if they exist.
             let mut builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new(
                 r#"
             SELECT
@@ -142,6 +141,14 @@ impl Tummy {
                 builder.push(" AND m.user_id = ");
                 builder.push_bind(uid);
             }
+            if let Some(bef) = before {
+                builder.push(" AND m.ts < ");
+                builder.push_bind(bef);
+            }
+            if let Some(after) = after {
+                builder.push(" AND m.ts > ");
+                builder.push_bind(after);
+            }
 
             builder.push(" ORDER BY m.ts DESC LIMIT ");
             builder.push_bind(limit);
@@ -152,8 +159,7 @@ impl Tummy {
             return Ok(recent_messages.into_iter().map(SearchResult::from).collect());
         }
 
-        // Sanitize the input to prevent tsquery syntax errors.
-        // We replace characters that have special meaning in tsquery with spaces.
+        // sanitize for tsquery
         let sanitized_query_text = query_text
             .replace(":", " ")
             .replace("&", " ")
@@ -162,15 +168,11 @@ impl Tummy {
             .replace("(", " ")
             .replace(")", " ");
 
-        // Split the sanitized text into words for building the tsquery.
+        // split words
         let search_terms: Vec<&str> = sanitized_query_text.split_whitespace().collect();
-
-        // Prepare tsquery strings for full-text and partial search
-        // The full text query joins all terms with the 'and' operator.
         let full_text_query = search_terms.join(" & ");
 
-        // The partial text query applies the prefix search operator only to the last term.
-        // This is a common and robust way to handle partial matching.
+        // applies the prefix search operator only to the last term
         let partial_text_query = if search_terms.len() > 1 {
             let mut partial_query = search_terms[0..search_terms.len() - 1].join(" & ");
             partial_query.push_str(&format!(" & {}:*", search_terms.last().unwrap()));
@@ -179,10 +181,9 @@ impl Tummy {
             format!("{}:*", search_terms.first().unwrap_or(&""))
         };
 
-        // --- Main Query Builder ---
         let mut builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new("WITH ");
 
-        // --- 1. Fuzzy (Trigram) Search CTE ---
+        // Fuzzy
         builder.push(r#"
     fuzzy AS (
         SELECT
@@ -204,13 +205,21 @@ impl Tummy {
             builder.push(" AND user_id = ");
             builder.push_bind(uid);
         }
+        if let Some(bef) = before {
+            builder.push(" AND ts < ");
+            builder.push_bind(bef);
+        }
+        if let Some(after) = after {
+            builder.push(" AND ts > ");
+            builder.push_bind(after);
+        }
         builder.push(r#"
         ORDER BY rank_ix
         LIMIT 30
     ),
 "#);
 
-        // --- 2. Full-Text Search CTE ---
+        // Full text
         builder.push(r#"
     full_text AS (
         SELECT
@@ -233,13 +242,21 @@ impl Tummy {
             builder.push(" AND user_id = ");
             builder.push_bind(uid);
         }
+        if let Some(bef) = before {
+            builder.push(" AND ts < ");
+            builder.push_bind(bef);
+        }
+        if let Some(after) = after {
+            builder.push(" AND ts > ");
+            builder.push_bind(after);
+        }
         builder.push(r#"
         ORDER BY rank_ix
         LIMIT 30
     ),
 "#);
 
-        // --- 3. Partial (Prefix) Search CTE ---
+        // Prefix search
         builder.push(r#"
     partial_search AS (
         SELECT
@@ -262,12 +279,20 @@ impl Tummy {
             builder.push(" AND user_id = ");
             builder.push_bind(uid);
         }
+        if let Some(bef) = before {
+            builder.push(" AND ts < ");
+            builder.push_bind(bef);
+        }
+        if let Some(after) = after {
+            builder.push(" AND ts > ");
+            builder.push_bind(after);
+        }
         builder.push(r#"
         LIMIT 30
     )
 "#);
 
-        // --- Final Selection and RRF ---
+        // RRF
         builder.push(r#"
     SELECT
         m.channel_id, channel.name AS channel_name, m.user_id, m.msg_text, m.ts, m.thread_ts, m.parent_user_id,
@@ -302,8 +327,6 @@ impl Tummy {
 
         builder.push(" LIMIT ");
         builder.push_bind(limit);
-
-        println!("Final SQL Query: {}", builder.sql());
 
         let query = builder.build_query_as::<DBSearchResult>();
         let messages = query.fetch_all(&self.tummy_conn_pool).await?;

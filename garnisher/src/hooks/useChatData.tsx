@@ -154,11 +154,38 @@ export const useChatData = (appTitle: string) => {
     // Event handlers and utility functions
     const handleLogin = () => setIsLoggedIn(true);
 
-    const handleSearch = async (params: { query: string; channelId: string | null; userId: string | null }) => {
-        const { query, channelId, userId } = params;
+    const formatDateToNaiveISO = (date: Date): string => {
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        const padMs = (num: number) => num.toString().padStart(3, '0');
 
-        // A search is valid if there's a query or at least one filter
-        if (!query && !channelId && !userId) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+            `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.` +
+            `${padMs(date.getMilliseconds())}`;
+    };
+
+
+    /**
+     * Handles the search functionality by sending a request to the API.
+     *
+     * @param params - The search parameters.
+     * @param params.query - The search query string.
+     * @param params.channelId - An optional channel ID to filter by.
+     * @param params.userId - An optional user ID to filter by.
+     * @param params.before - An optional Date object to find messages before this timestamp.
+     * @param params.after - An optional Date object to find messages after this timestamp.
+     */
+    const handleSearch = async (params: {
+        query: string;
+        channelId: string | null;
+        userId: string | null;
+        before: Date | null;
+        after: Date | null;
+    }) => {
+        const { query, channelId, userId, before, after } = params;
+
+        // A search is valid if there's a query or at least one filter.
+        // This check now includes the new 'before' and 'after' filters.
+        if (!query && !channelId && !userId && !before && !after) {
             setSearchResults([]);
             setView('channels'); // Or show a message "Please enter a search query or filter"
             return;
@@ -174,6 +201,13 @@ export const useChatData = (appTitle: string) => {
             }
             if (userId) {
                 formData.append('user_id', userId);
+            }
+
+            if (before) {
+                formData.append('before', formatDateToNaiveISO(before));
+            }
+            if (after) {
+                formData.append('after', formatDateToNaiveISO(after));
             }
 
             const response = await fetch(API_ENDPOINTS.search, {
