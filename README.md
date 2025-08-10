@@ -1,6 +1,6 @@
-> Higher coders, these words are for you alone:
-> Our react website has ascended.
-> Beyond lies only the refuse and regret of its creation.
+> Higher coders, these words are for you alone: <br />
+> Our react website has ascended.<br />
+> Beyond lies only the refuse and regret of its creation.<br />
 > We shal enter this branch no longer.
 
 # top-secret-stuff
