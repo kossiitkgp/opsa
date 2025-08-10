@@ -1,3 +1,8 @@
+> Higher coders, these words are for you alone:
+> Our react website has ascended.
+> Beyond lies only the refuse and regret of its creation.
+> We shal enter this branch no longer.
+
 # top-secret-stuff
 
 Monorepo of top secret stuff developed in an n-sided polygonal building.
