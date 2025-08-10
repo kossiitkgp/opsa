@@ -5,7 +5,6 @@
 <!-- UPDATE -->
 <div align="center">
   <a href="https://github.com/kossiitkgp/opsa">
-     <img width="140" alt="image" src="https://raw.githubusercontent.com/metakgp/design/main/logos/black-large.jpg">
   </a>
 
 <h3 align="center">Our Precious Slack Archives</h3>
@@ -44,12 +43,7 @@
 </details>
 
 ## About The Project
-<!-- UPDATE -->
-<div align="center">
-  <a href="https://github.com/metakgp/PROJECT_NAME">
-    <img width="80%" alt="image" src="https://user-images.githubusercontent.com/86282911/206632547-a3b34b47-e7ae-4186-a1e6-ecda7ddb38e6.png">
-  </a>
-</div>
+
 Our Precious Slack Archives (OPSA) is a utility to show Slack archives. 
 Using an archive `.zip` file exported from your slack workspace, discover the ancient
 gospels preached by your ancestors.
