@@ -15,6 +15,16 @@ import {
 // Adjust the path if necessary.
 import type { Channel, Message as MessageType, SearchResult, ViewState } from './types';
 
+// Define the type for the search parameters object
+type SearchParams = {
+    query: string;
+    channelId: string | null;
+    userId: string | null;
+    before: Date | null;
+    after: Date | null;
+};
+
+
 // --- Props for MainContent ---
 // We define the props that MainContent will need to receive.
 interface MainContentProps {
@@ -24,11 +34,13 @@ interface MainContentProps {
     searchResults: SearchResult[];
     selectedChannel: Channel | null;
     error: string | null;
-    handleSearch: (query: string) => void;
+    // FIX: Updated handleSearch to expect the SearchParams object
+    handleSearch: (params: SearchParams) => void;
     closeSearchResults: () => void;
     handleRepliesClick: (message: MessageType) => void;
     allMessagesLoaded: boolean;
-    messageListRef: React.RefObject<HTMLDivElement>;
+    // FIX: Updated messageListRef to allow for a null value
+    messageListRef: React.RefObject<HTMLDivElement | null>;
     handleScroll: (e: React.UIEvent<HTMLDivElement>) => void;
     chatData: ReturnType<typeof useChatData>;
 }
@@ -86,7 +98,7 @@ const MainContent: React.FC<MainContentProps> = ({
                 <ChannelView
                     messages={messages}
                     onRepliesClick={handleRepliesClick}
-                    messageListRef={messageListRef}
+                    messageListRef={messageListRef as React.RefObject<HTMLDivElement>}
                     onScroll={handleScroll}
                     allMessagesLoaded={allMessagesLoaded}
                     isLoading={isLoading}
