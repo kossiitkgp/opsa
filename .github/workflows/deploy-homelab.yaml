@@ -45,7 +45,7 @@ jobs:
                   docker build -t opsa-digester:latest ./digester
                   
                   # Build excretor service  
-                  docker build -t opsa-excretor:latest ./excretor
+                  docker build -f excretor/Dockerfile -t opsa-excretor:latest .
                   
                   # Build garnisher service
                   docker build -t opsa-garnisher:latest ./garnisher
