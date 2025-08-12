@@ -91,11 +91,11 @@ jobs:
                   
                   # Stop existing services if running
                   echo "Stopping existing services..."
-                  docker compoe down --remove-orphans || true
+                  docker compose down --remove-orphans || true
                   
                   # Start services
                   echo "Starting services..."
-                  docker compoe up -d
+                  docker compose up -d
                   
                   # Clean up image files
                   rm -f *.tar.gz
@@ -121,11 +121,11 @@ jobs:
                   cd ~/opsa-deployment
                   
                   # Check container status
-                  if docker compoe ps | grep -q "Up"; then
+                  if docker compose ps | grep -q "Up"; then
                     echo "✅ Services are running successfully"
                   else
                     echo "❌ Some services failed to start"
-                    docker compoe logs --tail=50
+                    docker compose logs --tail=50
                     exit 1
                   fi
                   EOF
