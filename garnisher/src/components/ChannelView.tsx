@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 interface ChannelViewProps {
     messages: MessageType[];
     onRepliesClick: (message: MessageType) => void;
-    messageListRef: React.RefObject<HTMLDivElement>;
+    messageListRef: React.RefObject<HTMLDivElement | null>;
     onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
     allMessagesLoaded: boolean;
     isLoading: boolean;
