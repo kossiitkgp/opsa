@@ -130,6 +130,7 @@ jobs:
                       exit 1
                     fi
                     echo "Slack archive downloaded successfully"
+                    EOF
                   else
                     echo "⚠️  No SLACK_ARCHIVE_URL provided. Archive processing will be skipped."
                     echo "   You can manually upload an archive later and run the digester."
