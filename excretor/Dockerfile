@@ -8,7 +8,8 @@ COPY excretor/ .
 # Copy migrations directory
 COPY migrations ./migrations
 
-# Build the binary
+# Build the binary with SQLX offline mode
+ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
 CMD ["target/release/excretor"]
