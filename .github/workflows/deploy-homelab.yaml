@@ -1,5 +1,31 @@
 name: Deploy to Homelab
 
+# This workflow deploys OPSA (Our Precious Slack Archives) to a homelab server
+# 
+# Prerequisites:
+# 1. Set up the following secrets in your repository:
+#    - HOMELAB_SSH_HOST: SSH hostname of your homelab server
+#    - HOMELAB_SSH_USER: SSH username for your homelab server
+#    - HOMELAB_SSH_PRIVATE_KEY: SSH private key for authentication
+#    - HOMELAB_SSH_PUBLIC_KEY: SSH public key for authentication
+#    - DOTENV_PRIVATE_KEY_PROD: Private key for decrypting .env.prod file
+#    - SLACK_ARCHIVE_URL: (Optional) Direct download URL for your Slack archive zip file
+#    - HOMELAB_HEALTH_CHECK_URL: (Optional) URL for health check endpoint
+#    - DEPLOYMENT_WEBHOOK_URL: (Optional) Webhook URL for deployment notifications
+#
+# 2. Create a .env.prod file in your repository with encrypted environment variables
+#
+# 3. Ensure your homelab server has Docker and Docker Compose installed
+#
+# The workflow will:
+# 1. Build Docker images for all services (digester, excretor, garnisher)
+# 2. Transfer files and images to the homelab server
+# 3. Download Slack archive if URL is provided
+# 4. Set up database and run migrations
+# 5. Process Slack archive using the digester (if available)
+# 6. Start all services
+# 7. Perform health checks
+
 on:
     push:
         branches:
@@ -46,7 +72,7 @@ jobs:
                   # Build digester service
                   docker build -t opsa-digester:latest ./digester
                   
-                  # Build excretor service  
+                  # Build excretor service (needs full context from project root)
                   docker build -f excretor/Dockerfile -t opsa-excretor:latest .
                   
                   # Build garnisher service
@@ -63,6 +89,7 @@ jobs:
               env:
                   SSH_HOST: ${{ secrets.HOMELAB_SSH_HOST }}
                   SSH_USER: ${{ secrets.HOMELAB_SSH_USER }}
+                  SLACK_ARCHIVE_URL: ${{ secrets.SLACK_ARCHIVE_URL }}
               run: |
                   echo "Transferring files to homelab server..."
                   
@@ -74,13 +101,39 @@ jobs:
                   
                   # Create .env file using dotenvx
                   echo "Creating .env file from encrypted .env.prod..."
+                  if [ ! -f .env.prod ]; then
+                    echo "ERROR: .env.prod file not found. Please ensure it exists in the repository."
+                    exit 1
+                  fi
                   DOTENV_PRIVATE_KEY_PROD="${{ secrets.DOTENV_PRIVATE_KEY_PROD }}" dotenvx decrypt -f .env.prod -o .env
+                  
+                  # Verify .env file was created successfully
+                  if [ ! -f .env ]; then
+                    echo "ERROR: Failed to create .env file from .env.prod"
+                    exit 1
+                  fi
                   
                   # Transfer docker-compose and other necessary files
                   scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no docker-compose.yml $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no .env $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no migrations/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no tummy/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  
+                  # Download Slack archive if URL is provided
+                  if [ -n "$SLACK_ARCHIVE_URL" ]; then
+                    echo "Downloading Slack archive from provided URL..."
+                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+                    cd ~/opsa-deployment
+                    curl -L -o slack-archive.zip "$SLACK_ARCHIVE_URL"
+                    if [ ! -f slack-archive.zip ]; then
+                      echo "ERROR: Failed to download Slack archive from $SLACK_ARCHIVE_URL"
+                      exit 1
+                    fi
+                    echo "Slack archive downloaded successfully"
+                  else
+                    echo "⚠️  No SLACK_ARCHIVE_URL provided. Archive processing will be skipped."
+                    echo "   You can manually upload an archive later and run the digester."
+                  fi
 
             - name: Deploy services on homelab server
               env:
@@ -92,6 +145,22 @@ jobs:
                   ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
                   cd ~/opsa-deployment
                   
+                  # Validate environment file
+                  echo "Validating environment configuration..."
+                  if [ ! -f .env ]; then
+                    echo "ERROR: .env file not found"
+                    exit 1
+                  fi
+                  
+                  # Check for required environment variables
+                  required_vars="TUMMY_USERNAME TUMMY_PASSWORD TUMMY_PORT EXCRETOR_PORT"
+                  for var in $required_vars; do
+                    if ! grep -q "^$var=" .env; then
+                      echo "ERROR: Required environment variable $var not found in .env"
+                      exit 1
+                    fi
+                  done
+                  
                   # Load Docker images
                   echo "Loading Docker images..."
                   docker load < opsa-digester.tar.gz
@@ -102,12 +171,59 @@ jobs:
                   echo "Stopping existing services..."
                   docker compose down --remove-orphans || true
                   
-                  # Start services
-                  echo "Starting services..."
+                  # Start database first and wait for it to be healthy
+                  echo "Starting database service..."
+                  docker compose up tummy -d --wait
+                  
+                  # Run database migrations using sqlx-cli
+                  echo "Running database migrations..."
+                  # Create a temporary container with sqlx-cli to run migrations
+                  # Note: docker-compose creates networks with project name prefix, using digestive-tract network
+                  docker run --rm --network digestive-tract \
+                    -v $(pwd)/migrations:/app/migrations \
+                    -w /app \
+                    -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
+                    rust:1.80 sh -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run"
+                  
+                  # Process Slack archive if available
+                  if [ -f slack-archive.zip ]; then
+                    echo "Processing Slack archive using digester..."
+                    
+                    # Check if database already has messages (avoid reprocessing)
+                    message_count=$(docker run --rm --network digestive-tract \
+                      -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT COUNT(*) FROM messages;" | xargs)
+                    
+                    if [ "$message_count" -gt "0" ]; then
+                      echo "Database already contains $message_count messages. Skipping archive processing."
+                      echo "To reprocess the archive, clean the database first."
+                    else
+                      echo "Database is empty. Processing Slack archive..."
+                      # Run digester with the archive file
+                      docker run --rm --network digestive-tract \
+                        -v $(pwd)/slack-archive.zip:/app/slack-archive.zip \
+                        -e ZIPFILE_PATH="/app/slack-archive.zip" \
+                        -e TUMMY_USERNAME="$(grep TUMMY_USERNAME .env | cut -d= -f2)" \
+                        -e TUMMY_PASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                        -e TUMMY_PORT="$(grep TUMMY_PORT .env | cut -d= -f2)" \
+                        -e TUMMY_HOST="tummy" \
+                        -e TUMMY_DB="tummy" \
+                        opsa-digester:latest
+                      
+                      echo "Slack archive processing completed!"
+                    fi
+                  else
+                    echo "No Slack archive found. Skipping archive processing."
+                    echo "The application will start with an empty database."
+                  fi
+                  
+                  # Start all services
+                  echo "Starting all services..."
                   docker compose up -d
                   
-                  # Clean up image files
+                  # Clean up temporary files
                   rm -f *.tar.gz
+                  rm -f slack-archive.zip
                   
                   # Show running containers
                   echo "Deployment complete! Running containers:"
@@ -130,11 +246,26 @@ jobs:
                   cd ~/opsa-deployment
                   
                   # Check container status
-                  if docker compose ps | grep -q "Up"; then
-                    echo "✅ Services are running successfully"
+                  echo "Checking service status..."
+                  # Note: digester is not included as it's a one-time processing tool for Slack archives
+                  services="tummy excretor garnisher"
+                  all_healthy=true
+                  
+                  for service in $services; do
+                    if docker compose ps $service | grep -q "Up"; then
+                      echo "✅ $service is running"
+                    else
+                      echo "❌ $service failed to start"
+                      echo "Logs for $service:"
+                      docker compose logs --tail=20 $service
+                      all_healthy=false
+                    fi
+                  done
+                  
+                  if [ "$all_healthy" = true ]; then
+                    echo "✅ All services are running successfully"
                   else
                     echo "❌ Some services failed to start"
-                    docker compose logs --tail=50
                     exit 1
                   fi
                   EOF
