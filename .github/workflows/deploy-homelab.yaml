@@ -122,7 +122,7 @@ jobs:
                   # Download Slack archive if URL is provided
                   if [ -n "$SLACK_ARCHIVE_URL" ]; then
                     echo "Downloading Slack archive from provided URL..."
-                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<-EOF
                     cd ~/opsa-deployment
                     curl -L -o slack-archive.zip "$SLACK_ARCHIVE_URL"
                     if [ ! -f slack-archive.zip ]; then
