@@ -6,3 +6,4 @@ export * from './ThreadView';
 export * from './SearchResults';
 export * from './ErrorView';
 export * from './Login';
+export * from './SearchBar';

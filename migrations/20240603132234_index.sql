@@ -1,14 +1,11 @@
--- Create the pg_trgm extension if it doesn't already exist
+-- Enable the necessary extensions
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Create a GIN index on the 'msg_text' column for efficient similarity searches
--- The 'gin_trgm_ops' operator class is specifically for trigram-based searches
-CREATE INDEX trgm_idx ON messages USING GIN (msg_text gin_trgm_ops);
+-- Create the tsvector column and its GIN index for full-text search
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS msg_tsv tsvector;
+UPDATE messages SET msg_tsv = to_tsvector('english', msg_text) WHERE msg_tsv IS NULL;
+CREATE INDEX IF NOT EXISTS msg_tsv_idx ON messages USING GIN(msg_tsv);
+-- Optional: Add a trigger to keep msg_tsv updated automatically
 
--- The previous script for tsvector is kept as it's a good practice for full-text search,
--- which can be used in conjunction with trigram similarity searches.
-ALTER TABLE messages
-    ADD COLUMN textsearchable_index_col tsvector
-        GENERATED ALWAYS AS (to_tsvector('english', msg_text)) STORED;
-
-CREATE INDEX textsearch_idx ON messages USING GIN (textsearchable_index_col);
+-- Create the trigram GIN index for fuzzy/similarity search
+CREATE INDEX IF NOT EXISTS trgm_idx ON messages USING GIN (msg_text gin_trgm_ops);

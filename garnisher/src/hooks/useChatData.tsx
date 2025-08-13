@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Channel, Message as MessageType, MessageThread, ViewState } from "../types";
+import type { Channel, Message as MessageType, MessageThread, SearchResult, ViewState, User } from "../types";
 import { API_ENDPOINTS } from '../api';
 
 export const useChatData = (appTitle: string) => {
@@ -10,15 +10,16 @@ export const useChatData = (appTitle: string) => {
     const [messages, setMessages] = useState<MessageType[]>([]);
     const [oldestMessageTimestamp, setOldestMessageTimestamp] = useState<string | null>(null);
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
-    const [searchResults, setSearchResults] = useState<MessageType[]>([]);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState<boolean>(false);
+    const [users, setUsers] = useState<User[]>([]);
 
     const messageListRef = useRef<HTMLDivElement>(null);
     const previousScrollHeightRef = useRef<number | null>(null);
 
-    // Initial fetch of channels on component mount
+    // Initial fetch of channels and users on component mount
     useEffect(() => {
         const fetchChannels = async () => {
             setIsLoading(true);
@@ -39,7 +40,23 @@ export const useChatData = (appTitle: string) => {
                 setIsLoading(false);
             }
         };
+
+        const fetchUsers = async () => {
+            try {
+                const response = await fetch(API_ENDPOINTS.users);
+                if (!response.ok) throw new Error('Failed to fetch users.');
+                const data = await response.json();
+                if (data.users) {
+                    setUsers(data.users);
+                }
+            } catch (err: any) {
+                console.error("Failed to fetch users:", err.message);
+                // Optionally set an error state specific to users or a general one
+            }
+        };
+
         fetchChannels();
+        fetchUsers();
     }, []);
 
     // Fetch messages for the selected channel whenever it changes
@@ -48,6 +65,7 @@ export const useChatData = (appTitle: string) => {
         setMessages([]);
         setOldestMessageTimestamp(null);
         setAllMessagesLoaded(false);
+        previousScrollHeightRef.current = null;
 
         const fetchChannelAndMessages = async () => {
             setIsLoading(true);
@@ -75,28 +93,39 @@ export const useChatData = (appTitle: string) => {
         fetchChannelAndMessages();
     }, [selectedChannel?.id]);
 
-    // Handle scroll position after new messages are loaded
+    /**
+     * FIX: This effect now correctly handles scrolling.
+     * It runs whenever the `messages` array changes.
+     * - If `previousScrollHeightRef` is set, it means we're loading old messages, so it preserves the scroll position.
+     * - Otherwise, it's a new channel load, and it scrolls to the bottom.
+     * The dependency array is changed from `[messages, oldestMessageTimestamp]` to just `[messages]`.
+     */
     useEffect(() => {
         if (!messageListRef.current || messages.length === 0) return;
+
         if (previousScrollHeightRef.current !== null) {
+            // We're loading older messages, so restore the scroll position.
             setTimeout(() => {
-                const newScrollHeight = messageListRef.current!.scrollHeight;
-                const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
-                messageListRef.current!.scrollTop += heightDifference;
-                previousScrollHeightRef.current = null;
+                if (messageListRef.current) {
+                    const newScrollHeight = messageListRef.current.scrollHeight;
+                    const heightDifference = newScrollHeight - previousScrollHeightRef.current!;
+                    messageListRef.current.scrollTop = heightDifference;
+                    previousScrollHeightRef.current = null; // Reset after use.
+                }
             }, 0);
         } else {
-            if (oldestMessageTimestamp === null) {
-                messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-            }
+            // This is a fresh load (e.g., new channel), so scroll to the bottom.
+            messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
         }
-    }, [messages, oldestMessageTimestamp]);
+    }, [messages]);
 
     // Function to handle fetching older messages
     const fetchOlderMessages = async (channelId: string, timestamp: string | null) => {
         if (isLoading || (timestamp && allMessagesLoaded)) return;
         setIsLoading(true);
         try {
+            // Before fetching, store the current scroll height. This is the signal
+            // that we are loading older messages.
             if (messageListRef.current) {
                 previousScrollHeightRef.current = messageListRef.current.scrollHeight;
             }
@@ -125,21 +154,72 @@ export const useChatData = (appTitle: string) => {
     // Event handlers and utility functions
     const handleLogin = () => setIsLoggedIn(true);
 
-    const handleSearch = async (query: string) => {
-        if (!query) return;
+    const formatDateToNaiveISO = (date: Date): string => {
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        const padMs = (num: number) => num.toString().padStart(3, '0');
+
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+            `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.` +
+            `${padMs(date.getMilliseconds())}`;
+    };
+
+
+    /**
+     * Handles the search functionality by sending a request to the API.
+     *
+     * @param params - The search parameters.
+     * @param params.query - The search query string.
+     * @param params.channelId - An optional channel ID to filter by.
+     * @param params.userId - An optional user ID to filter by.
+     * @param params.before - An optional Date object to find messages before this timestamp.
+     * @param params.after - An optional Date object to find messages after this timestamp.
+     */
+    const handleSearch = async (params: {
+        query: string;
+        channelId: string | null;
+        userId: string | null;
+        before: Date | null;
+        after: Date | null;
+    }) => {
+        const { query, channelId, userId, before, after } = params;
+
+        // A search is valid if there's a query or at least one filter.
+        // This check now includes the new 'before' and 'after' filters.
+        if (!query && !channelId && !userId && !before && !after) {
+            setSearchResults([]);
+            setView('channels'); // Or show a message "Please enter a search query or filter"
+            return;
+        }
+
         setIsLoading(true);
         setView('search');
         try {
             const formData = new URLSearchParams();
             formData.append('query', query);
+            if (channelId) {
+                formData.append('channel_id', channelId);
+            }
+            if (userId) {
+                formData.append('user_id', userId);
+            }
+
+            if (before) {
+                formData.append('before', formatDateToNaiveISO(before));
+            }
+            if (after) {
+                formData.append('after', formatDateToNaiveISO(after));
+            }
+
             const response = await fetch(API_ENDPOINTS.search, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData,
             });
             if (!response.ok) throw new Error('Search failed.');
+
             const data = await response.json();
             setSearchResults(data.messages || []);
+
         } catch (err: any) {
             setError(err.message);
             setView('error');
@@ -157,9 +237,8 @@ export const useChatData = (appTitle: string) => {
 
     const handleRepliesClick = async (message: MessageType) => {
         setIsLoading(true);
-        setView('thread');
         try {
-            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, selectedChannel!.id));
+            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, message.channel_id));
             if (!response.ok) throw new Error('Failed to fetch replies.');
             const data = await response.json();
             setSelectedThread({ parentMessage: message, replies: data.messages });
@@ -173,7 +252,6 @@ export const useChatData = (appTitle: string) => {
 
     const closeThread = () => {
         setSelectedThread(null);
-        setView('channels');
     };
 
     const closeSearchResults = () => {
@@ -203,6 +281,7 @@ export const useChatData = (appTitle: string) => {
         appTitle,
         allMessagesLoaded,
         messageListRef,
+        users,
         handleSearch,
         handleChannelClick,
         handleRepliesClick,

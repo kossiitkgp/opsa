@@ -43,6 +43,7 @@ pub struct DBUser {
 pub struct DBParentMessage {
     /// The channel ID where the message was posted.
     pub channel_id: String,
+    pub channel_name: String,
     /// The user ID who posted the message.
     pub user_id: String,
     /// The message text content.
@@ -78,6 +79,7 @@ pub struct DBParentMessage {
 pub struct DBReply {
     /// The channel ID where the reply was posted.
     pub channel_id: String,
+    pub channel_name: String,
     /// The user ID who posted the reply.
     pub user_id: String,
     /// The reply text content.
@@ -104,4 +106,37 @@ pub struct DBReply {
     pub deleted: bool,
     /// Whether the user is a bot.
     pub is_bot: bool,
+}
+
+/// Represents a search result, which could be a parent message or a reply.
+/// If it's a reply, it includes information about the parent message.
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DBSearchResult {
+    pub channel_id: String,
+    pub channel_name: String,
+    pub user_id: String,
+    pub msg_text: String,
+    pub ts: chrono::NaiveDateTime,
+    pub thread_ts: Option<chrono::NaiveDateTime>,
+    pub parent_user_id: Option<String>,
+    pub cnt: Option<i64>,
+
+    pub id: String,
+    pub name: String,
+    pub real_name: String,
+    pub display_name: String,
+    pub image_url: Option<String>,
+    pub email: String,
+    pub deleted: bool,
+    pub is_bot: bool,
+
+    // opt parent message fields (for replies)
+    pub parent_msg_text: Option<String>,
+    pub parent_name: Option<String>,
+    pub parent_real_name: Option<String>,
+    pub parent_display_name: Option<String>,
+    pub parent_image_url: Option<String>,
+    pub parent_email: Option<String>,
+    pub parent_deleted: Option<bool>,
+    pub parent_is_bot: Option<bool>,
 }

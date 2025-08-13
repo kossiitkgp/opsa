@@ -8,6 +8,7 @@ use crate::api::routes::RouterState;
 use axum::response::IntoResponse;
 use axum::extract::{Form, Path, Query, State};
 use axum::{http::StatusCode, response::Response, Json};
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 use crate::api::models;
 
@@ -31,6 +32,10 @@ pub struct SearchQuery {
     channel_id: Option<String>,
     /// Optional user ID to filter search.
     user_id: Option<String>,
+    /// Optional before time parameter
+    before: Option<String>,
+    /// Optional after time parameter
+    after: Option<String>,
 }
 
 /// Query parameters for paginating messages.
@@ -45,8 +50,6 @@ pub struct Pagination {
 /// Query parameters for filtering messages by date.
 #[derive(Deserialize)]
 pub struct DateQuery {
-    /// Optional ISO date string to fetch messages since this date.
-    since: Option<String>,
 }
 
 /// Searches messages by text, channel, and user.
@@ -68,8 +71,9 @@ pub async fn search(
             &payload.query,
             payload.channel_id.as_deref(),
             payload.user_id.as_deref(),
-            10,
-            0.1
+            30,
+            payload.before.map(|ts| {NaiveDateTime::from_pg_ts(&ts)}),
+            payload.after.map(|ts| {NaiveDateTime::from_pg_ts(&ts)})
         )
         .await?;
     Ok((
@@ -98,9 +102,8 @@ pub async fn get_messages(
     State(state): State<RouterState>,
     Path(channel_id): Path<String>,
     pagination: Query<Pagination>,
-    date_query: Query<DateQuery>,
 ) -> Result<(StatusCode, Response), AppError> {
-    let mut messages = state
+    let messages = state
         .tummy
         .fetch_msg_page(
             &channel_id,

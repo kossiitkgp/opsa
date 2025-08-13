@@ -88,6 +88,7 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
 
     let api_router = Router::new()
         .route("/channels", get(handlers::get_channels))
+        .route("/users", get(handlers::get_users))
         .route("/channels/:channel_id", get(handlers::load_channel))
         .route("/messages/:channel_id", get(handlers::get_messages))
         .route("/replies", get(handlers::get_replies))
