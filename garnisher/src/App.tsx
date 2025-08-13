@@ -24,11 +24,17 @@ interface MainContentProps {
     searchResults: SearchResult[];
     selectedChannel: Channel | null;
     error: string | null;
-    handleSearch: (query: string) => void;
+    handleSearch: (params: {
+        query: string;
+        channelId: string | null;
+        userId: string | null;
+        before: Date | null;
+        after: Date | null;
+    }) => void;
     closeSearchResults: () => void;
     handleRepliesClick: (message: MessageType) => void;
     allMessagesLoaded: boolean;
-    messageListRef: React.RefObject<HTMLDivElement>;
+    messageListRef: React.RefObject<HTMLDivElement | null>;
     handleScroll: (e: React.UIEvent<HTMLDivElement>) => void;
     chatData: ReturnType<typeof useChatData>;
 }
