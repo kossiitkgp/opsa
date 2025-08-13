@@ -122,15 +122,15 @@ jobs:
                   # Download Slack archive if URL is provided
                   if [ -n "$SLACK_ARCHIVE_URL" ]; then
                     echo "Downloading Slack archive from provided URL..."
-                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<-EOF
-                    cd ~/opsa-deployment
-                    curl -L -o slack-archive.zip "$SLACK_ARCHIVE_URL"
-                    if [ ! -f slack-archive.zip ]; then
-                      echo "ERROR: Failed to download Slack archive from $SLACK_ARCHIVE_URL"
-                      exit 1
-                    fi
-                    echo "Slack archive downloaded successfully"
-                    EOF
+                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "
+                      cd ~/opsa-deployment
+                      curl -L -o slack-archive.zip \"$SLACK_ARCHIVE_URL\"
+                      if [ ! -f slack-archive.zip ]; then
+                        echo \"ERROR: Failed to download Slack archive from $SLACK_ARCHIVE_URL\"
+                        exit 1
+                      fi
+                      echo \"Slack archive downloaded successfully\"
+                    "
                   else
                     echo "⚠️  No SLACK_ARCHIVE_URL provided. Archive processing will be skipped."
                     echo "   You can manually upload an archive later and run the digester."
