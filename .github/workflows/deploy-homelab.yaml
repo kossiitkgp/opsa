@@ -16,6 +16,10 @@ jobs:
                   fetch-depth: 0
                   token: ${{ secrets.LURKINGRYUU_PAT }}
 
+            - name: Install dotenvx
+              run: |
+                  npm install -g @dotenvx/dotenvx
+
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
@@ -68,8 +72,13 @@ jobs:
                   # Transfer Docker images
                   scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no *.tar.gz $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   
+                  # Create .env file using dotenvx
+                  echo "Creating .env file from encrypted .env.prod..."
+                  DOTENV_PRIVATE_KEY_PROD="${{ secrets.DOTENV_PRIVATE_KEY_PROD }}" dotenvx decrypt -f .env.prod -o .env
+                  
                   # Transfer docker-compose and other necessary files
                   scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no docker-compose.yml $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no .env $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no migrations/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
                   scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no tummy/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
 

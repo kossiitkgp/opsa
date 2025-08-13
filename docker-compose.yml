@@ -44,7 +44,7 @@ services:
             - digestive-tract
 
     excretor:
-        build: "./excretor"
+        image: opsa-excretor:latest
         restart: always
         depends_on:
             tummy:
@@ -69,6 +69,26 @@ services:
             digestive-tract:
                 aliases:
                     - excretor
+
+    digester:
+        image: opsa-digester:latest
+        restart: always
+        ports:
+            - "8081:8080"
+        networks:
+            digestive-tract:
+                aliases:
+                    - digester
+
+    garnisher:
+        image: opsa-garnisher:latest
+        restart: always
+        ports:
+            - "3000:80"
+        networks:
+            digestive-tract:
+                aliases:
+                    - garnisher
 
 networks:
     digestive-tract:
