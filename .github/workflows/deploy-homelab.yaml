@@ -105,7 +105,7 @@ jobs:
                     echo "ERROR: .env.prod file not found. Please ensure it exists in the repository."
                     exit 1
                   fi
-                  DOTENV_PRIVATE_KEY_PROD="${{ secrets.DOTENV_PRIVATE_KEY_PROD }}" dotenvx decrypt -f .env.prod -o .env
+                  DOTENV_PRIVATE_KEY_PROD="${{ secrets.DOTENV_PRIVATE_KEY_PROD }}" dotenvx decrypt -f .env.prod --stdout > .env
                   
                   # Verify .env file was created successfully
                   if [ ! -f .env ]; then
