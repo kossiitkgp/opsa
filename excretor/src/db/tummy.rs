@@ -48,7 +48,7 @@ impl Tummy {
             .await
             .expect("Could not connect to tummy.");
 
-        sqlx::migrate!("../migrations")
+        sqlx::migrate!("./migrations")
             .run(&tummy_conn_pool)
             .await
             .expect("Could not run tummy migrations.");
