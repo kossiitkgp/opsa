@@ -44,7 +44,7 @@ jobs:
 
             - name: Install dotenvx
               run: |
-                  npm install -g @dotenvx/dotenvx
+                  sudo npm install -g @dotenvx/dotenvx
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
