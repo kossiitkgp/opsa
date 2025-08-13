@@ -168,23 +168,76 @@ jobs:
                   docker load < opsa-excretor.tar.gz
                   docker load < opsa-garnisher.tar.gz
                   
-                  # Stop existing services if running
-                  echo "Stopping existing services..."
-                  docker compose down --remove-orphans || true
+                  # Stop existing services and clean volumes for fresh start
+                  echo "Stopping existing services and cleaning volumes..."
+                  docker compose down --remove-orphans -v || true
                   
                   # Start database first and wait for it to be healthy
                   echo "Starting database service..."
                   docker compose up tummy -d --wait
                   
-                  # Run database migrations using sqlx-cli
-                  echo "Running database migrations..."
-                  # Create a temporary container with sqlx-cli to run migrations
-                  # Note: docker-compose creates networks with project name prefix, using digestive-tract network
-                  docker run --rm --network digestive-tract \
-                    -v $(pwd)/migrations:/app/migrations \
-                    -w /app \
-                    -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
-                    rust:1.80 sh -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run"
+                  # Initialize database schema and run migrations
+                  echo "Initializing database schema and running migrations..."
+                  
+                  # First, check if the database schema is already initialized
+                  schema_exists=$(docker run --rm --network digestive-tract \
+                    -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                    postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                  
+                  if [ "$schema_exists" = "f" ]; then
+                    echo "Database schema not found. Initializing with base schema..."
+                    # The base schema should be automatically loaded by the tummy container via init.sql
+                    # Let's wait a bit more for the initialization to complete
+                    sleep 5
+                    
+                    # Check again if schema exists
+                    schema_exists=$(docker run --rm --network digestive-tract \
+                      -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                    
+                    if [ "$schema_exists" = "f" ]; then
+                      echo "Database schema not found. Attempting manual initialization..."
+                      if [ -f "tummy/init.sql" ]; then
+                        echo "Running init.sql manually..."
+                        docker run --rm --network digestive-tract \
+                          -v "$(pwd)/tummy/init.sql:/tmp/init.sql" \
+                          -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                          postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -f /tmp/init.sql
+                        
+                        # Check again if schema exists after manual initialization
+                        schema_exists=$(docker run --rm --network digestive-tract \
+                          -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                          postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                        
+                        if [ "$schema_exists" = "t" ]; then
+                          echo "✅ Database schema initialized successfully via manual init"
+                        else
+                          echo "❌ Manual database initialization failed"
+                          exit 1
+                        fi
+                      else
+                        echo "❌ tummy/init.sql not found. Database cannot be initialized."
+                        exit 1
+                      fi
+                    else
+                      echo "✅ Database schema initialized successfully"
+                    fi
+                  else
+                    echo "ℹ️ Database schema already exists"
+                  fi
+                  
+                  # Run sqlx migrations if available
+                  if [ -d "migrations" ]; then
+                    echo "Running additional database migrations..."
+                    docker run --rm --network digestive-tract \
+                      -v $(pwd)/migrations:/app/migrations \
+                      -w /app \
+                      -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
+                      rust:1.80 sh -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run"
+                    echo "✅ Database migrations completed"
+                  else
+                    echo "⚠️ No migrations directory found, skipping additional migrations"
+                  fi
                   
                   # Process Slack archive if available
                   if [ -f slack-archive.zip ]; then
@@ -193,7 +246,12 @@ jobs:
                     # Check if database already has messages (avoid reprocessing)
                     message_count=$(docker run --rm --network digestive-tract \
                       -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
-                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT COUNT(*) FROM messages;" | xargs)
+                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT COUNT(*) FROM messages;" 2>/dev/null | xargs | tr -d ' ' || echo "0")
+                    
+                    # Ensure message_count is a valid number
+                    if ! [[ "$message_count" =~ ^[0-9]+$ ]]; then
+                      message_count=0
+                    fi
                     
                     if [ "$message_count" -gt "0" ]; then
                       echo "Database already contains $message_count messages. Skipping archive processing."
@@ -211,23 +269,25 @@ jobs:
                         -e TUMMY_DB="tummy" \
                         opsa-digester:latest
                       
-                      echo "Slack archive processing completed!"
+                      echo "✅ Slack archive processing completed!"
                     fi
                   else
-                    echo "No Slack archive found. Skipping archive processing."
+                    echo "⚠️ No Slack archive found. Skipping archive processing."
                     echo "The application will start with an empty database."
                   fi
                   
-                  # Start all services
+                  # Start all services (excluding tummy-dev and digester)
+                  # Note: digester is a one-time job, not a persistent service
+                  # Note: tummy-dev is for local development only
                   echo "Starting all services..."
-                  docker compose up -d
+                  docker compose up -d tummy excretor garnisher
                   
                   # Clean up temporary files
                   rm -f *.tar.gz
                   rm -f slack-archive.zip
                   
                   # Show running containers
-                  echo "Deployment complete! Running containers:"
+                  echo "✅ Deployment complete! Running containers:"
                   docker ps
                   EOF
 
@@ -249,6 +309,7 @@ jobs:
                   # Check container status
                   echo "Checking service status..."
                   # Note: digester is not included as it's a one-time processing tool for Slack archives
+                  # Note: tummy-dev is not included as it's for local development only
                   services="tummy excretor garnisher"
                   all_healthy=true
                   
@@ -257,16 +318,20 @@ jobs:
                       echo "✅ $service is running"
                     else
                       echo "❌ $service failed to start"
-                      echo "Logs for $service:"
+                      echo "📋 Logs for $service:"
                       docker compose logs --tail=20 $service
                       all_healthy=false
                     fi
                   done
                   
                   if [ "$all_healthy" = true ]; then
-                    echo "✅ All services are running successfully"
+                    echo "🎉 All services are running successfully!"
+                    echo ""
+                    echo "📊 Service Status Summary:"
+                    docker compose ps tummy excretor garnisher
                   else
                     echo "❌ Some services failed to start"
+                    echo "💡 Troubleshooting: Check logs above and ensure all environment variables are set correctly"
                     exit 1
                   fi
                   EOF

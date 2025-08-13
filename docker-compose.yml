@@ -73,6 +73,16 @@ services:
     digester:
         image: opsa-digester:latest
         restart: always
+        depends_on:
+            tummy:
+                condition: service_healthy
+        environment:
+            - TUMMY_USERNAME=${TUMMY_USERNAME}
+            - TUMMY_PASSWORD=${TUMMY_PASSWORD}
+            - TUMMY_DB=tummy
+            - TUMMY_PORT=${TUMMY_PORT}
+            - TUMMY_HOST=tummy
+            - ZIPFILE_PATH=${ZIPFILE_PATH}
         ports:
             - "8081:8080"
         networks:
@@ -83,6 +93,12 @@ services:
     garnisher:
         image: opsa-garnisher:latest
         restart: always
+        depends_on:
+            excretor:
+                condition: service_started
+        environment:
+            - EXCRETOR_HOST=excretor
+            - EXCRETOR_PORT=${EXCRETOR_PORT}
         ports:
             - "3000:80"
         networks:
