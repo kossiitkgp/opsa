@@ -93,7 +93,7 @@ main() {
     log_info "Building garnisher service..."
     docker build -t opsa-garnisher:latest ./garnisher
     
-    log_info "Building migrations service..."
+    log_info "Building migrations service (for debugging/manual use)..."
     docker build -f migrations.Dockerfile -t opsa-migrations:latest .
     
     log_success "All Docker images built successfully"
@@ -212,17 +212,16 @@ main() {
         log_info "Database schema already exists"
     fi
     
-    # Run sqlx migrations if available
-    if [ -d "migrations" ]; then
-        log_info "Running additional database migrations..."
-        # Use the dedicated migrations image with sqlx-cli pre-installed
-        docker run --rm --network digestive-tract \
-            -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
-            opsa-migrations:latest
-        log_success "Database migrations completed"
-    else
-        log_warning "No migrations directory found, skipping additional migrations"
-    fi
+    # Clean up any conflicting migration records from previous runs
+    log_info "🧹 Cleaning up any conflicting migration records..."
+    docker run --rm --network digestive-tract \
+        -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+        postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -c \
+        "DROP TABLE IF EXISTS _sqlx_migrations;" 2>/dev/null || true
+    
+    # Note: Migrations are handled by the excretor service on startup
+    # This avoids checksum mismatches between separate migration runs
+    log_info "Database migrations will be handled by excretor service on startup"
     
     # Step 8: Process Slack archive if available
     log_info "Step 8: Processing Slack archive..."

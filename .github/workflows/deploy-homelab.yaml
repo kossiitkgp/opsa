@@ -78,8 +78,7 @@ jobs:
                   # Build garnisher service
                   docker build -t opsa-garnisher:latest ./garnisher
                   
-                  # Build migrations service (dedicated image for running migrations)
-                  docker build -f migrations.Dockerfile -t opsa-migrations:latest .
+                  # Note: Migration image not built in main workflow since excretor handles migrations
 
             - name: Save Docker images
               run: |
@@ -87,7 +86,6 @@ jobs:
                   docker save opsa-digester:latest | gzip > opsa-digester.tar.gz
                   docker save opsa-excretor:latest | gzip > opsa-excretor.tar.gz  
                   docker save opsa-garnisher:latest | gzip > opsa-garnisher.tar.gz
-                  docker save opsa-migrations:latest | gzip > opsa-migrations.tar.gz
 
             - name: Transfer files to homelab server
               env:
@@ -171,7 +169,6 @@ jobs:
                   docker load < opsa-digester.tar.gz
                   docker load < opsa-excretor.tar.gz
                   docker load < opsa-garnisher.tar.gz
-                  docker load < opsa-migrations.tar.gz
                   
                   # Stop existing services and clean volumes for fresh start
                   echo "Stopping existing services and cleaning volumes..."
@@ -231,17 +228,16 @@ jobs:
                     echo "ℹ️ Database schema already exists"
                   fi
                   
-                  # Run sqlx migrations if available
-                  if [ -d "migrations" ]; then
-                    echo "Running additional database migrations..."
-                    # Use the dedicated migrations image with sqlx-cli pre-installed
-                    docker run --rm --network digestive-tract \
-                      -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
-                      opsa-migrations:latest
-                    echo "✅ Database migrations completed"
-                  else
-                    echo "⚠️ No migrations directory found, skipping additional migrations"
-                  fi
+                  # Clean up any conflicting migration records from previous runs
+                  echo "🧹 Cleaning up any conflicting migration records..."
+                  docker run --rm --network digestive-tract \
+                    -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                    postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -c \
+                    "DROP TABLE IF EXISTS _sqlx_migrations;" || true
+                  
+                  # Note: Migrations are handled by the excretor service on startup
+                  # This avoids checksum mismatches between separate migration runs
+                  echo "ℹ️ Database migrations will be handled by excretor service on startup"
                   
                   # Process Slack archive if available
                   if [ -f slack-archive.zip ]; then

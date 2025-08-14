@@ -76,9 +76,9 @@ The `test-deployment.sh` script simulates the production deployment workflow by:
 
 2. **Building Docker Images**
    - `opsa-digester:latest` - Processes Slack archives
-   - `opsa-excretor:latest` - Backend API server (includes sqlx-cli)
+   - `opsa-excretor:latest` - Backend API server (handles its own migrations)
    - `opsa-garnisher:latest` - Frontend web application
-   - `opsa-migrations:latest` - Database migrations runner (includes sqlx-cli)
+   - `opsa-migrations:latest` - Database migrations runner (available for manual use)
 
 3. **Setting Up Deployment Directory**
    - Creates `./test-deployment/` directory
@@ -91,8 +91,9 @@ The `test-deployment.sh` script simulates the production deployment workflow by:
 
 5. **Database Setup**
    - Starts PostgreSQL database (tummy service)
-   - Runs database migrations using pre-built migrations image
+   - Cleans up any conflicting migration records
    - Waits for database to be healthy
+   - Migrations are handled by excretor service on startup
 
 6. **Processing Slack Archive**
    - Checks if database already has messages
