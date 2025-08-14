@@ -77,6 +77,9 @@ jobs:
                   
                   # Build garnisher service
                   docker build -t opsa-garnisher:latest ./garnisher
+                  
+                  # Build migrations service (dedicated image for running migrations)
+                  docker build -f migrations.Dockerfile -t opsa-migrations:latest .
 
             - name: Save Docker images
               run: |
@@ -84,6 +87,7 @@ jobs:
                   docker save opsa-digester:latest | gzip > opsa-digester.tar.gz
                   docker save opsa-excretor:latest | gzip > opsa-excretor.tar.gz  
                   docker save opsa-garnisher:latest | gzip > opsa-garnisher.tar.gz
+                  docker save opsa-migrations:latest | gzip > opsa-migrations.tar.gz
 
             - name: Transfer files to homelab server
               env:
@@ -167,6 +171,7 @@ jobs:
                   docker load < opsa-digester.tar.gz
                   docker load < opsa-excretor.tar.gz
                   docker load < opsa-garnisher.tar.gz
+                  docker load < opsa-migrations.tar.gz
                   
                   # Stop existing services and clean volumes for fresh start
                   echo "Stopping existing services and cleaning volumes..."
@@ -229,11 +234,10 @@ jobs:
                   # Run sqlx migrations if available
                   if [ -d "migrations" ]; then
                     echo "Running additional database migrations..."
+                    # Use the dedicated migrations image with sqlx-cli pre-installed
                     docker run --rm --network digestive-tract \
-                      -v $(pwd)/migrations:/app/migrations \
-                      -w /app \
                       -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
-                      rust:1.80 sh -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run"
+                      opsa-migrations:latest
                     echo "✅ Database migrations completed"
                   else
                     echo "⚠️ No migrations directory found, skipping additional migrations"

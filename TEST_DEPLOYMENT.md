@@ -76,8 +76,9 @@ The `test-deployment.sh` script simulates the production deployment workflow by:
 
 2. **Building Docker Images**
    - `opsa-digester:latest` - Processes Slack archives
-   - `opsa-excretor:latest` - Backend API server
+   - `opsa-excretor:latest` - Backend API server (includes sqlx-cli)
    - `opsa-garnisher:latest` - Frontend web application
+   - `opsa-migrations:latest` - Database migrations runner (includes sqlx-cli)
 
 3. **Setting Up Deployment Directory**
    - Creates `./test-deployment/` directory
@@ -90,7 +91,7 @@ The `test-deployment.sh` script simulates the production deployment workflow by:
 
 5. **Database Setup**
    - Starts PostgreSQL database (tummy service)
-   - Runs database migrations using sqlx-cli
+   - Runs database migrations using pre-built migrations image
    - Waits for database to be healthy
 
 6. **Processing Slack Archive**
@@ -168,6 +169,16 @@ docker system prune -f --volumes
 cd .. && rm -rf test-deployment
 ./test-deployment.sh
 ```
+
+## Network Connectivity Improvements
+
+This deployment includes improvements to handle network connectivity issues:
+
+- **Pre-built Binary**: Uses pre-compiled `sqlx-cli` binary instead of compiling from source
+- **Fast Docker Builds**: Migration image builds in seconds instead of minutes
+- **No Runtime Network Dependencies**: Migration process doesn't require internet connectivity during deployment
+- **Dedicated Migration Image**: Separate lightweight image specifically for database migrations
+- **Improved Reliability**: Eliminates spurious network errors and long build times
 
 ## Differences from Production
 

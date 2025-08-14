@@ -93,6 +93,9 @@ main() {
     log_info "Building garnisher service..."
     docker build -t opsa-garnisher:latest ./garnisher
     
+    log_info "Building migrations service..."
+    docker build -f migrations.Dockerfile -t opsa-migrations:latest .
+    
     log_success "All Docker images built successfully"
     
     # Step 4: Copy necessary files to deployment directory
@@ -212,11 +215,10 @@ main() {
     # Run sqlx migrations if available
     if [ -d "migrations" ]; then
         log_info "Running additional database migrations..."
+        # Use the dedicated migrations image with sqlx-cli pre-installed
         docker run --rm --network digestive-tract \
-            -v "$(pwd)/migrations:/app/migrations" \
-            -w /app \
             -e DATABASE_URL="postgresql://$(grep TUMMY_USERNAME .env | cut -d= -f2):$(grep TUMMY_PASSWORD .env | cut -d= -f2)@tummy:$(grep TUMMY_PORT .env | cut -d= -f2)/tummy" \
-            rust:1.80 sh -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run"
+            opsa-migrations:latest
         log_success "Database migrations completed"
     else
         log_warning "No migrations directory found, skipping additional migrations"
