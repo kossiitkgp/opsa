@@ -284,7 +284,6 @@ jobs:
                   
                   # Clean up temporary files
                   rm -f *.tar.gz
-                  rm -f slack-archive.zip
                   
                   # Show running containers
                   echo "✅ Deployment complete! Running containers:"
