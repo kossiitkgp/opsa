@@ -78,7 +78,6 @@ The `test-deployment.sh` script simulates the production deployment workflow by:
    - `opsa-digester:latest` - Processes Slack archives
    - `opsa-excretor:latest` - Backend API server (handles its own migrations)
    - `opsa-garnisher:latest` - Frontend web application
-   - `opsa-migrations:latest` - Database migrations runner (available for manual use)
 
 3. **Setting Up Deployment Directory**
    - Creates `./test-deployment/` directory

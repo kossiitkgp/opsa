@@ -93,8 +93,7 @@ main() {
     log_info "Building garnisher service..."
     docker build -t opsa-garnisher:latest ./garnisher
     
-    log_info "Building migrations service (for debugging/manual use)..."
-    docker build -f migrations.Dockerfile -t opsa-migrations:latest .
+    # Note: Migration image build removed since excretor handles its own migrations
     
     log_success "All Docker images built successfully"
     
