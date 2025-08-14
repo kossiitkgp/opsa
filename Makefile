@@ -78,6 +78,9 @@ endif
 	@echo "Starting tummy-dev with exposed port"
 	@$(DOCKER_COMPOSE) up tummy-dev -d --wait;
 	@echo ""
+	@echo "Running migrations..."
+	@cargo sqlx migrate run
+	@echo ""
 	@echo "Starting digester..."
 	@bash -c "trap 'echo ""; $(MAKEQ) dev-stop; exit 0' SIGINT SIGTERM ERR; cd $(PROJECT_DIR)/digester; go mod download; ZIPFILE_PATH='$(FILE)' $(ENVS) go run .;"
 # In case the digester gracefully shuts down

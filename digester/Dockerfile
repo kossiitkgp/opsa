@@ -1,12 +1,11 @@
-FROM golang:1.22.3-alpine AS builder
+FROM golang:1.23 AS builder
 
 WORKDIR /app
-RUN apk add --no-cache build-base
 COPY . .
 RUN go mod download && \
     go build -o app .
 
-FROM alpine:latest
+FROM debian:bookworm-slim
 
 WORKDIR /app
 COPY --from=builder /app/app .

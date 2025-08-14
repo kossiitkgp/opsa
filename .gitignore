@@ -1,3 +1,5 @@
 .env
 *.zip
+.env.keys
 .idea
+test-deployment/

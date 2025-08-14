@@ -1,0 +1,383 @@
+name: Deploy to Homelab
+
+# This workflow deploys OPSA (Our Precious Slack Archives) to a homelab server
+# 
+# Prerequisites:
+# 1. Set up the following secrets in your repository:
+#    - HOMELAB_SSH_HOST: SSH hostname of your homelab server
+#    - HOMELAB_SSH_USER: SSH username for your homelab server
+#    - HOMELAB_SSH_PRIVATE_KEY: SSH private key for authentication
+#    - HOMELAB_SSH_PUBLIC_KEY: SSH public key for authentication
+#    - DOTENV_PRIVATE_KEY_PROD: Private key for decrypting .env.prod file
+#    - SLACK_ARCHIVE_URL: (Optional) Direct download URL for your Slack archive zip file
+#    - HOMELAB_HEALTH_CHECK_URL: (Optional) URL for health check endpoint
+#    - DEPLOYMENT_WEBHOOK_URL: (Optional) Webhook URL for deployment notifications
+#
+# 2. Create a .env.prod file in your repository with encrypted environment variables
+#
+# 3. Ensure your homelab server has Docker and Docker Compose installed
+#
+# The workflow will:
+# 1. Build Docker images for all services (digester, excretor, garnisher)
+# 2. Transfer files and images to the homelab server
+# 3. Download Slack archive if URL is provided
+# 4. Set up database and run migrations
+# 5. Process Slack archive using the digester (if available)
+# 6. Start all services
+# 7. Perform health checks
+
+on:
+    push:
+        branches:
+            - "rewrite"
+
+jobs:
+    deploy-homelab:
+        runs-on: [self-hosted, homelab]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.LURKINGRYUU_PAT }}
+
+            - name: Install dotenvx
+              run: |
+                  sudo npm install -g @dotenvx/dotenvx
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Configure SSH for homelab server
+              env:
+                  SSH_PRIVATE_KEY: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+                  SSH_PUBLIC_KEY: ${{ secrets.HOMELAB_SSH_PUBLIC_KEY }}
+                  SSH_HOST: ${{ secrets.HOMELAB_SSH_HOST }}
+                  SSH_USER: ${{ secrets.HOMELAB_SSH_USER }}
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "$SSH_PRIVATE_KEY" > ~/.ssh/homelab_key
+                  echo "$SSH_PUBLIC_KEY" > ~/.ssh/homelab_key.pub
+                  chmod 600 ~/.ssh/homelab_key
+                  chmod 600 ~/.ssh/homelab_key.pub
+                  
+                  # Add homelab server to known hosts
+                  ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+
+            - name: Build Docker images
+              run: |
+                  echo "Building Docker images..."
+                  
+                  # Build digester service
+                  docker build -t opsa-digester:latest ./digester
+                  
+                  # Build excretor service (needs full context from project root)
+                  docker build -f excretor/Dockerfile -t opsa-excretor:latest .
+                  
+                  # Build garnisher service
+                  docker build -t opsa-garnisher:latest ./garnisher
+                  
+                  # Note: Migration image not built in main workflow since excretor handles migrations
+
+            - name: Save Docker images
+              run: |
+                  echo "Saving Docker images to tar files..."
+                  docker save opsa-digester:latest | gzip > opsa-digester.tar.gz
+                  docker save opsa-excretor:latest | gzip > opsa-excretor.tar.gz  
+                  docker save opsa-garnisher:latest | gzip > opsa-garnisher.tar.gz
+
+            - name: Transfer files to homelab server
+              env:
+                  SSH_HOST: ${{ secrets.HOMELAB_SSH_HOST }}
+                  SSH_USER: ${{ secrets.HOMELAB_SSH_USER }}
+                  SLACK_ARCHIVE_URL: ${{ secrets.SLACK_ARCHIVE_URL }}
+              run: |
+                  echo "Transferring files to homelab server..."
+                  
+                  # Create deployment directory on remote server
+                  ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "mkdir -p ~/opsa-deployment"
+                  
+                  # Transfer Docker images
+                  scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no *.tar.gz $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  
+                  # Create .env file using dotenvx
+                  echo "Creating .env file from encrypted .env.prod..."
+                  if [ ! -f .env.prod ]; then
+                    echo "ERROR: .env.prod file not found. Please ensure it exists in the repository."
+                    exit 1
+                  fi
+                  DOTENV_PRIVATE_KEY_PROD="${{ secrets.DOTENV_PRIVATE_KEY_PROD }}" dotenvx decrypt -f .env.prod --stdout > .env
+                  
+                  # Verify .env file was created successfully
+                  if [ ! -f .env ]; then
+                    echo "ERROR: Failed to create .env file from .env.prod"
+                    exit 1
+                  fi
+                  
+                  # Transfer docker-compose and other necessary files
+                  scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no docker-compose.yml $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  scp -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no .env $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no migrations/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  scp -r -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no tummy/ $SSH_USER@$SSH_HOST:~/opsa-deployment/
+                  
+                  # Download Slack archive if URL is provided
+                  if [ -n "$SLACK_ARCHIVE_URL" ]; then
+                    echo "Downloading Slack archive from provided URL..."
+                    ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "
+                      cd ~/opsa-deployment
+                      curl -L -o slack-archive.zip \"$SLACK_ARCHIVE_URL\"
+                      if [ ! -f slack-archive.zip ]; then
+                        echo \"ERROR: Failed to download Slack archive from $SLACK_ARCHIVE_URL\"
+                        exit 1
+                      fi
+                      echo \"Slack archive downloaded successfully\"
+                    "
+                  else
+                    echo "⚠️  No SLACK_ARCHIVE_URL provided. Archive processing will be skipped."
+                    echo "   You can manually upload an archive later and run the digester."
+                  fi
+
+            - name: Deploy services on homelab server
+              env:
+                  SSH_HOST: ${{ secrets.HOMELAB_SSH_HOST }}
+                  SSH_USER: ${{ secrets.HOMELAB_SSH_USER }}
+              run: |
+                  echo "Deploying services on homelab server..."
+                  
+                  ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
+                  cd ~/opsa-deployment
+                  
+                  # Validate environment file
+                  echo "Validating environment configuration..."
+                  if [ ! -f .env ]; then
+                    echo "ERROR: .env file not found"
+                    exit 1
+                  fi
+                  
+                  # Check for required environment variables
+                  required_vars="TUMMY_USERNAME TUMMY_PASSWORD TUMMY_PORT EXCRETOR_PORT"
+                  for var in $required_vars; do
+                    if ! grep -q "^$var=" .env; then
+                      echo "ERROR: Required environment variable $var not found in .env"
+                      exit 1
+                    fi
+                  done
+                  
+                  # Load Docker images
+                  echo "Loading Docker images..."
+                  docker load < opsa-digester.tar.gz
+                  docker load < opsa-excretor.tar.gz
+                  docker load < opsa-garnisher.tar.gz
+                  
+                  # Stop existing services and clean volumes for fresh start
+                  echo "Stopping existing services and cleaning volumes..."
+                  docker compose down --remove-orphans -v || true
+                  
+                  # Start database first and wait for it to be healthy
+                  echo "Starting database service..."
+                  docker compose up tummy -d --wait
+                  
+                  # Initialize database schema and run migrations
+                  echo "Initializing database schema and running migrations..."
+                  
+                  # First, check if the database schema is already initialized
+                  schema_exists=$(docker run --rm --network digestive-tract \
+                    -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                    postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                  
+                  if [ "$schema_exists" = "f" ]; then
+                    echo "Database schema not found. Initializing with base schema..."
+                    # The base schema should be automatically loaded by the tummy container via init.sql
+                    # Let's wait a bit more for the initialization to complete
+                    sleep 5
+                    
+                    # Check again if schema exists
+                    schema_exists=$(docker run --rm --network digestive-tract \
+                      -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                    
+                    if [ "$schema_exists" = "f" ]; then
+                      echo "Database schema not found. Attempting manual initialization..."
+                      if [ -f "tummy/init.sql" ]; then
+                        echo "Running init.sql manually..."
+                        docker run --rm --network digestive-tract \
+                          -v "$(pwd)/tummy/init.sql:/tmp/init.sql" \
+                          -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                          postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -f /tmp/init.sql
+                        
+                        # Check again if schema exists after manual initialization
+                        schema_exists=$(docker run --rm --network digestive-tract \
+                          -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                          postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages');" 2>/dev/null | xargs || echo "f")
+                        
+                        if [ "$schema_exists" = "t" ]; then
+                          echo "✅ Database schema initialized successfully via manual init"
+                        else
+                          echo "❌ Manual database initialization failed"
+                          exit 1
+                        fi
+                      else
+                        echo "❌ tummy/init.sql not found. Database cannot be initialized."
+                        exit 1
+                      fi
+                    else
+                      echo "✅ Database schema initialized successfully"
+                    fi
+                  else
+                    echo "ℹ️ Database schema already exists"
+                  fi
+                  
+                  # Clean up any conflicting migration records from previous runs
+                  echo "🧹 Cleaning up any conflicting migration records..."
+                  docker run --rm --network digestive-tract \
+                    -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                    postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -c \
+                    "DROP TABLE IF EXISTS _sqlx_migrations;" || true
+                  
+                  # Note: Migrations are handled by the excretor service on startup
+                  # This avoids checksum mismatches between separate migration runs
+                  echo "ℹ️ Database migrations will be handled by excretor service on startup"
+                  
+                  # Process Slack archive if available
+                  if [ -f slack-archive.zip ]; then
+                    echo "Processing Slack archive using digester..."
+                    
+                    # Check if database already has messages (avoid reprocessing)
+                    message_count=$(docker run --rm --network digestive-tract \
+                      -e PGPASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                      postgres:latest psql -h tummy -U "$(grep TUMMY_USERNAME .env | cut -d= -f2)" -d tummy -t -c "SELECT COUNT(*) FROM messages;" 2>/dev/null | xargs | tr -d ' ' || echo "0")
+                    
+                    # Ensure message_count is a valid number
+                    if ! [[ "$message_count" =~ ^[0-9]+$ ]]; then
+                      message_count=0
+                    fi
+                    
+                    if [ "$message_count" -gt "0" ]; then
+                      echo "Database already contains $message_count messages. Skipping archive processing."
+                      echo "To reprocess the archive, clean the database first."
+                    else
+                      echo "Database is empty. Processing Slack archive..."
+                      # Run digester with the archive file
+                      docker run --rm --network digestive-tract \
+                        -v $(pwd)/slack-archive.zip:/app/slack-archive.zip \
+                        -e ZIPFILE_PATH="/app/slack-archive.zip" \
+                        -e TUMMY_USERNAME="$(grep TUMMY_USERNAME .env | cut -d= -f2)" \
+                        -e TUMMY_PASSWORD="$(grep TUMMY_PASSWORD .env | cut -d= -f2)" \
+                        -e TUMMY_PORT="$(grep TUMMY_PORT .env | cut -d= -f2)" \
+                        -e TUMMY_HOST="tummy" \
+                        -e TUMMY_DB="tummy" \
+                        opsa-digester:latest
+                      
+                      echo "✅ Slack archive processing completed!"
+                    fi
+                  else
+                    echo "⚠️ No Slack archive found. Skipping archive processing."
+                    echo "The application will start with an empty database."
+                  fi
+                  
+                  # Start all services (excluding tummy-dev and digester)
+                  # Note: digester is a one-time job, not a persistent service
+                  # Note: tummy-dev is for local development only
+                  echo "Starting all services..."
+                  docker compose up -d tummy excretor garnisher
+                  
+                  # Clean up temporary files
+                  rm -f *.tar.gz
+                  
+                  # Show running containers
+                  echo "✅ Deployment complete! Running containers:"
+                  docker ps
+                  EOF
+
+            - name: Health check
+              env:
+                  SSH_HOST: ${{ secrets.HOMELAB_SSH_HOST }}
+                  SSH_USER: ${{ secrets.HOMELAB_SSH_USER }}
+                  HEALTH_CHECK_URL: ${{ secrets.HOMELAB_HEALTH_CHECK_URL }}
+              run: |
+                  echo "Performing health check..."
+                  
+                  # Wait a bit for services to start
+                  sleep 30
+                  
+                  # Check if containers are running
+                  ssh -i ~/.ssh/homelab_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
+                  cd ~/opsa-deployment
+                  
+                  # Check container status
+                  echo "Checking service status..."
+                  # Note: digester is not included as it's a one-time processing tool for Slack archives
+                  # Note: tummy-dev is not included as it's for local development only
+                  services="tummy excretor garnisher"
+                  all_healthy=true
+                  
+                  for service in $services; do
+                    if docker compose ps $service | grep -q "Up"; then
+                      echo "✅ $service is running"
+                    else
+                      echo "❌ $service failed to start"
+                      echo "📋 Logs for $service:"
+                      docker compose logs --tail=20 $service
+                      all_healthy=false
+                    fi
+                  done
+                  
+                  if [ "$all_healthy" = true ]; then
+                    echo "🎉 All services are running successfully!"
+                    echo ""
+                    echo "📊 Service Status Summary:"
+                    docker compose ps tummy excretor garnisher
+                  else
+                    echo "❌ Some services failed to start"
+                    echo "💡 Troubleshooting: Check logs above and ensure all environment variables are set correctly"
+                    exit 1
+                  fi
+                  EOF
+                  
+                  # Optional: HTTP health check if you have a health endpoint
+                  if [ -n "$HEALTH_CHECK_URL" ]; then
+                    echo "Checking health endpoint..."
+                    for i in {1..5}; do
+                      if curl -f "$HEALTH_CHECK_URL" > /dev/null 2>&1; then
+                        echo "✅ Health check passed"
+                        break
+                      else
+                        echo "⏳ Health check attempt $i failed, retrying..."
+                        sleep 10
+                      fi
+                      
+                      if [ $i -eq 5 ]; then
+                        echo "❌ Health check failed after 5 attempts"
+                        exit 1
+                      fi
+                    done
+                  fi
+
+            - name: Cleanup local files
+              if: always()
+              run: |
+                  echo "Cleaning up local files..."
+                  rm -f *.tar.gz
+                  rm -f ~/.ssh/homelab_key ~/.ssh/homelab_key.pub
+
+            - name: Send deployment notification
+              if: always()
+              env:
+                  WEBHOOK_URL: ${{ secrets.DEPLOYMENT_WEBHOOK_URL }}
+              run: |
+                  if [ -n "$WEBHOOK_URL" ]; then
+                    STATUS="${{ job.status }}"
+                    COMMIT_SHA="${{ github.sha }}"
+                    COMMIT_MSG="${{ github.event.head_commit.message }}"
+                    
+                    curl -X POST "$WEBHOOK_URL" \
+                      -H "Content-Type: application/json" \
+                      -d "{
+                        \"status\": \"$STATUS\",
+                        \"commit\": \"$COMMIT_SHA\",
+                        \"message\": \"$COMMIT_MSG\",
+                        \"branch\": \"rewrite\",
+                        \"repository\": \"${{ github.repository }}\"
+                      }" || echo "Failed to send notification"
+                  fi
