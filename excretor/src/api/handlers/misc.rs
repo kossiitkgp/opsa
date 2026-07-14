@@ -1,16 +1,16 @@
 //! Miscellaneous API handlers.
 //! Provides endpoints for serving static assets and the React frontend application.
 
+use crate::api::errors::AppError;
+use crate::api::models::UsersResponse;
+use crate::api::routes::RouterState;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::Json;
-use axum::response::Response;
-use tokio_util::io::ReaderStream;
-use crate::api::routes::RouterState;
-use crate::api::errors::AppError;
 use axum::response::IntoResponse;
-use crate::api::models::{UsersResponse};
+use axum::response::Response;
+use axum::Json;
+use tokio_util::io::ReaderStream;
 
 /// Serves static asset files from the configured directory.
 ///
@@ -66,10 +66,6 @@ pub async fn get_users(
     let users = state.tummy.get_all_users().await?;
     Ok((
         StatusCode::OK,
-        Json(
-            UsersResponse {
-                users,
-            }
-        ).into_response(),
+        Json(UsersResponse { users }).into_response(),
     ))
 }

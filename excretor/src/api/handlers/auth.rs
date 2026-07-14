@@ -2,21 +2,21 @@
 //! Provides endpoints for starting the OAuth flow and handling the callback,
 //! including token creation and cookie management.
 
-use std::collections::BTreeMap;
+use crate::api::errors::AppError;
+use crate::api::routes::{RouterState, FORBIDDEN_MSG};
 use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::CookieJar;
-use cookie::Cookie;
 use cookie::time::Duration;
+use cookie::Cookie;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::Sha256;
-use crate::api::errors::AppError;
-use crate::api::routes::{RouterState, FORBIDDEN_MSG};
+use std::collections::BTreeMap;
 
 /// Query parameters for the OAuth callback.
 #[derive(Deserialize)]
@@ -32,9 +32,7 @@ pub struct AuthCallback {
 ///
 /// # Returns
 /// A redirect response to Slack's OAuth page.
-pub async fn auth(
-    State(state): State<RouterState>,
-) -> Result<(StatusCode, Response), AppError> {
+pub async fn auth(State(state): State<RouterState>) -> Result<(StatusCode, Response), AppError> {
     let scopes = "im:read";
     let slack_auth_url = format!(
         "https://slack.com/oauth/v2/authorize?client_id={}&scope={}&redirect_uri={}",

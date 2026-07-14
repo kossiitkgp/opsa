@@ -2,11 +2,14 @@
 //! Provides endpoints for listing all channels and loading details for a specific channel.
 
 use crate::api::errors::AppError;
+use crate::api::models::{ChannelDetailsResponse, ChannelsResponse};
 use crate::api::routes::RouterState;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use axum::{http::StatusCode, response::{Response, Json}};
-use crate::api::models::{ChannelsResponse, ChannelDetailsResponse};
+use axum::{
+    http::StatusCode,
+    response::{Json, Response},
+};
 
 /// Fetches all available channels.
 ///
@@ -22,11 +25,7 @@ pub async fn get_channels(
     let channels = state.tummy.get_all_channels().await?;
     Ok((
         StatusCode::OK,
-        Json(
-            ChannelsResponse {
-                channels,
-            }
-        ).into_response(),
+        Json(ChannelsResponse { channels }).into_response(),
     ))
 }
 
@@ -45,24 +44,21 @@ pub async fn load_channel(
     Path(channel_id): Path<String>,
 ) -> Result<(StatusCode, Response), AppError> {
     let channel = state.tummy.get_channel_info(&channel_id).await?;
-    let messages = state
-        .tummy
-        .fetch_msg_page(&channel.id, &None, &50)
-        .await?;
+    let messages = state.tummy.fetch_msg_page(&channel.id, &None, &50).await?;
     let channel_id = channel.id.clone();
     Ok((
         StatusCode::OK,
-        Json(
-            ChannelDetailsResponse{
-                channel,
-                before_msg_timestamp: if let Some(last_msg) = messages.first() {
-                    Some(last_msg.timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string())
-                } else {
-                    None
-                },
-                messages,
-                channel_id,
-            }
-        ).into_response(),
+        Json(ChannelDetailsResponse {
+            channel,
+            before_msg_timestamp: messages.first().map(|last_msg| {
+                last_msg
+                    .timestamp
+                    .format("%Y-%m-%dT%H:%M:%S%.f")
+                    .to_string()
+            }),
+            messages,
+            channel_id,
+        })
+        .into_response(),
     ))
 }

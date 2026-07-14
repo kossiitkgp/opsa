@@ -22,7 +22,7 @@ pub(super) const FORBIDDEN_MSG: &str = "Mortals are forbidden from accessing the
 
 /// Verifies a JWT token by checking its validity and then using the
 /// embedded access token to call Slack's `auth.test` API.
-async fn verify_token(token: &String, state: &RouterState) -> Result<bool, errors::AppError> {
+async fn verify_token(token: &str, state: &RouterState) -> Result<bool, errors::AppError> {
     // verify the jwt token and accessing slack auth test api
     let key: Hmac<Sha256> =
         Hmac::new_from_slice(state.env_vars.slack_signing_secret.as_bytes()).unwrap();

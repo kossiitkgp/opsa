@@ -1,7 +1,7 @@
 use clap::Parser;
-mod env;
-mod db;
 mod api;
+mod db;
+mod env;
 mod types;
 
 use tracing::info;

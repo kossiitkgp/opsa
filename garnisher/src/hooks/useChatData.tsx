@@ -1,6 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Channel, Message as MessageType, MessageThread, SearchResult, ViewState, User } from "../types";
 import { API_ENDPOINTS } from '../api';
+
+const getErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
+const formatDateToNaiveISO = (date: Date): string => {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    const padMs = (num: number) => num.toString().padStart(3, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.` +
+        `${padMs(date.getMilliseconds())}`;
+};
 
 export const useChatData = (appTitle: string) => {
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -33,8 +45,8 @@ export const useChatData = (appTitle: string) => {
                         setSelectedChannel(data.channels[0]);
                     }
                 }
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err) {
+                setError(getErrorMessage(err));
                 setView('error');
             } finally {
                 setIsLoading(false);
@@ -49,8 +61,8 @@ export const useChatData = (appTitle: string) => {
                 if (data.users) {
                     setUsers(data.users);
                 }
-            } catch (err: any) {
-                console.error("Failed to fetch users:", err.message);
+            } catch (err) {
+                console.error("Failed to fetch users:", getErrorMessage(err));
                 // Optionally set an error state specific to users or a general one
             }
         };
@@ -60,8 +72,10 @@ export const useChatData = (appTitle: string) => {
     }, []);
 
     // Fetch messages for the selected channel whenever it changes
+    const selectedChannelId = selectedChannel?.id;
+
     useEffect(() => {
-        if (!selectedChannel) return;
+        if (!selectedChannelId) return;
         setMessages([]);
         setOldestMessageTimestamp(null);
         setAllMessagesLoaded(false);
@@ -70,7 +84,7 @@ export const useChatData = (appTitle: string) => {
         const fetchChannelAndMessages = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(API_ENDPOINTS.channelAndMessages(selectedChannel.id));
+                const response = await fetch(API_ENDPOINTS.channelAndMessages(selectedChannelId));
                 if (!response.ok) throw new Error('Failed to fetch channel data and messages.');
                 const data = await response.json();
                 if (data.channel && data.messages) {
@@ -82,8 +96,8 @@ export const useChatData = (appTitle: string) => {
                         setAllMessagesLoaded(true);
                     }
                 }
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err) {
+                setError(getErrorMessage(err));
                 setView('error');
             } finally {
                 setIsLoading(false);
@@ -91,7 +105,7 @@ export const useChatData = (appTitle: string) => {
         };
 
         fetchChannelAndMessages();
-    }, [selectedChannel?.id]);
+    }, [selectedChannelId]);
 
     /**
      * FIX: This effect now correctly handles scrolling.
@@ -143,8 +157,8 @@ export const useChatData = (appTitle: string) => {
             } else {
                 throw new Error('API response for messages is not in the expected format.');
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err));
             setView('error');
         } finally {
             setIsLoading(false);
@@ -153,16 +167,6 @@ export const useChatData = (appTitle: string) => {
 
     // Event handlers and utility functions
     const handleLogin = () => setIsLoggedIn(true);
-
-    const formatDateToNaiveISO = (date: Date): string => {
-        const pad = (num: number) => num.toString().padStart(2, '0');
-        const padMs = (num: number) => num.toString().padStart(3, '0');
-
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
-            `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.` +
-            `${padMs(date.getMilliseconds())}`;
-    };
-
 
     /**
      * Handles the search functionality by sending a request to the API.
@@ -174,7 +178,7 @@ export const useChatData = (appTitle: string) => {
      * @param params.before - An optional Date object to find messages before this timestamp.
      * @param params.after - An optional Date object to find messages after this timestamp.
      */
-    const handleSearch = async (params: {
+    const handleSearch = useCallback(async (params: {
         query: string;
         channelId: string | null;
         userId: string | null;
@@ -220,13 +224,13 @@ export const useChatData = (appTitle: string) => {
             const data = await response.json();
             setSearchResults(data.messages || []);
 
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err));
             setView('error');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     const handleChannelClick = (channel: Channel) => {
         setView('channels');
@@ -242,8 +246,8 @@ export const useChatData = (appTitle: string) => {
             if (!response.ok) throw new Error('Failed to fetch replies.');
             const data = await response.json();
             setSelectedThread({ parentMessage: message, replies: data.messages });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err));
             setView('error');
         } finally {
             setIsLoading(false);

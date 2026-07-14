@@ -1,6 +1,6 @@
-use super::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser, DBSearchResult};
+use super::dbmodels::{DBChannel, DBParentMessage, DBReply, DBSearchResult, DBUser};
 use crate::env::EnvVars;
-use crate::types::{Channel, Message, User, SearchResult};
+use crate::types::{Channel, Message, SearchResult, User};
 use sqlx::{
     postgres::PgPoolOptions,
     query_as,
@@ -78,8 +78,8 @@ impl Tummy {
             "SELECT * FROM channels WHERE id = $1",
             channel_id
         )
-            .fetch_one(&self.tummy_conn_pool)
-            .await?;
+        .fetch_one(&self.tummy_conn_pool)
+        .await?;
         Ok(channel.into())
     }
 
@@ -92,7 +92,10 @@ impl Tummy {
         before: Option<NaiveDateTime>,
         after: Option<NaiveDateTime>,
     ) -> color_eyre::Result<Vec<SearchResult>> {
-        println!("RRF Search with User: {:?}, Channel: {:?}", user_id, channel_id);
+        println!(
+            "RRF Search with User: {:?}, Channel: {:?}",
+            user_id, channel_id
+        );
 
         let is_text_search = !query_text.trim().is_empty();
         if !is_text_search {
@@ -156,7 +159,10 @@ impl Tummy {
             let query = builder.build_query_as::<crate::db::dbmodels::DBSearchResult>();
             let recent_messages = query.fetch_all(&self.tummy_conn_pool).await?;
 
-            return Ok(recent_messages.into_iter().map(SearchResult::from).collect());
+            return Ok(recent_messages
+                .into_iter()
+                .map(SearchResult::from)
+                .collect());
         }
 
         // sanitize for tsquery
@@ -184,18 +190,24 @@ impl Tummy {
         let mut builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new("WITH ");
 
         // Fuzzy
-        builder.push(r#"
+        builder.push(
+            r#"
     fuzzy AS (
         SELECT
             ts,
-            similarity(msg_text, "#);
+            similarity(msg_text, "#,
+        );
         builder.push_bind(query_text);
-        builder.push(r#") as sim_score,
-            row_number() OVER (ORDER BY similarity(msg_text, "#);
+        builder.push(
+            r#") as sim_score,
+            row_number() OVER (ORDER BY similarity(msg_text, "#,
+        );
         builder.push_bind(query_text);
-        builder.push(r#") DESC) as rank_ix
+        builder.push(
+            r#") DESC) as rank_ix
         FROM messages
-        WHERE msg_text %> "#);
+        WHERE msg_text %> "#,
+        );
         builder.push_bind(query_text);
         if let Some(cid) = channel_id {
             builder.push(" AND channel_id = ");
@@ -213,25 +225,33 @@ impl Tummy {
             builder.push(" AND ts > ");
             builder.push_bind(after);
         }
-        builder.push(r#"
+        builder.push(
+            r#"
         ORDER BY rank_ix
         LIMIT 30
     ),
-"#);
+"#,
+        );
 
         // Full text
-        builder.push(r#"
+        builder.push(
+            r#"
     full_text AS (
         SELECT
             ts,
-            ts_rank_cd(msg_tsv, to_tsquery('english', "#);
+            ts_rank_cd(msg_tsv, to_tsquery('english', "#,
+        );
         builder.push_bind(&full_text_query);
-        builder.push(r#")) as rank_score,
-            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('english', "#);
+        builder.push(
+            r#")) as rank_score,
+            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('english', "#,
+        );
         builder.push_bind(&full_text_query);
-        builder.push(r#")) DESC) as rank_ix
+        builder.push(
+            r#")) DESC) as rank_ix
         FROM messages
-        WHERE msg_tsv @@ to_tsquery('english', "#);
+        WHERE msg_tsv @@ to_tsquery('english', "#,
+        );
         builder.push_bind(&full_text_query);
         builder.push(r#")"#);
         if let Some(cid) = channel_id {
@@ -250,25 +270,33 @@ impl Tummy {
             builder.push(" AND ts > ");
             builder.push_bind(after);
         }
-        builder.push(r#"
+        builder.push(
+            r#"
         ORDER BY rank_ix
         LIMIT 30
     ),
-"#);
+"#,
+        );
 
         // Prefix search
-        builder.push(r#"
+        builder.push(
+            r#"
     partial_search AS (
         SELECT
             ts,
-            ts_rank_cd(msg_tsv, to_tsquery('simple', "#);
+            ts_rank_cd(msg_tsv, to_tsquery('simple', "#,
+        );
         builder.push_bind(&partial_text_query);
-        builder.push(r#")) as rank_score,
-            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('simple', "#);
+        builder.push(
+            r#")) as rank_score,
+            row_number() OVER (ORDER BY ts_rank_cd(msg_tsv, to_tsquery('simple', "#,
+        );
         builder.push_bind(&partial_text_query);
-        builder.push(r#")) DESC) as rank_ix
+        builder.push(
+            r#")) DESC) as rank_ix
         FROM messages
-        WHERE msg_tsv @@ to_tsquery('simple', "#);
+        WHERE msg_tsv @@ to_tsquery('simple', "#,
+        );
         builder.push_bind(&partial_text_query);
         builder.push(r#")"#);
         if let Some(cid) = channel_id {
@@ -287,10 +315,12 @@ impl Tummy {
             builder.push(" AND ts > ");
             builder.push_bind(after);
         }
-        builder.push(r#"
+        builder.push(
+            r#"
         LIMIT 30
     )
-"#);
+"#,
+        );
 
         // RRF
         builder.push(r#"
@@ -334,8 +364,6 @@ impl Tummy {
         Ok(messages.into_iter().map(SearchResult::from).collect())
     }
 
-
-
     pub async fn fetch_replies(
         &self,
         message_ts: &str,
@@ -374,8 +402,8 @@ impl Tummy {
             channel_id,
             user_id
         )
-            .fetch_all(&self.tummy_conn_pool)
-            .await?;
+        .fetch_all(&self.tummy_conn_pool)
+        .await?;
         Ok(replies.into_iter().map(Message::from).collect())
     }
 
@@ -391,8 +419,8 @@ impl Tummy {
             // The `ORDER BY ts DESC` ensures we get the most recent messages of the
             // older batch first.
             query_as!(
-            DBParentMessage,
-            r#"
+                DBParentMessage,
+                r#"
             SELECT
                 m.channel_id,
                 ch.name AS channel_name, -- Added the channel name here
@@ -433,19 +461,19 @@ impl Tummy {
                 ts DESC
             LIMIT $3
             "#,
-            channel_id,
-            timestamp,
-            *msgs_per_page as i64
-        )
-                .fetch_all(&self.tummy_conn_pool)
-                .await?
+                channel_id,
+                timestamp,
+                *msgs_per_page as i64
+            )
+            .fetch_all(&self.tummy_conn_pool)
+            .await?
         } else {
             // This is the initial load case.
             // We fetch the most recent messages from the channel.
             // `ORDER BY ts DESC` gets the latest messages, and `LIMIT` gets a single page.
             query_as!(
-            DBParentMessage,
-            "
+                DBParentMessage,
+                "
             SELECT
                 m.channel_id,
                 ch.name AS channel_name, -- Added the channel name here
@@ -486,14 +514,15 @@ impl Tummy {
                 m.ts DESC
             LIMIT $2
          ",
-            channel_id,
-            *msgs_per_page as i64
-        )
-                .fetch_all(&self.tummy_conn_pool)
-                .await?
+                channel_id,
+                *msgs_per_page as i64
+            )
+            .fetch_all(&self.tummy_conn_pool)
+            .await?
         };
         Ok(fetched_messages
-            .into_iter().rev()
+            .into_iter()
+            .rev()
             .map(Message::from)
             .collect())
     }

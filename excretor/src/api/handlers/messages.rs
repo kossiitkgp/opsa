@@ -2,15 +2,15 @@
 //! Provides endpoints for searching messages, fetching messages for a channel,
 //! and retrieving replies in a thread.
 
-use crate::db::tummy::SlackDateTime;
 use crate::api::errors::AppError;
+use crate::api::models;
 use crate::api::routes::RouterState;
-use axum::response::IntoResponse;
+use crate::db::tummy::SlackDateTime;
 use axum::extract::{Form, Path, Query, State};
+use axum::response::IntoResponse;
 use axum::{http::StatusCode, response::Response, Json};
 use chrono::NaiveDateTime;
 use serde::Deserialize;
-use crate::api::models;
 
 /// Request payload for fetching replies to a message.
 #[derive(Deserialize)]
@@ -47,11 +47,6 @@ pub struct Pagination {
     per_page: u32,
 }
 
-/// Query parameters for filtering messages by date.
-#[derive(Deserialize)]
-pub struct DateQuery {
-}
-
 /// Searches messages by text, channel, and user.
 ///
 /// # Parameters
@@ -72,18 +67,17 @@ pub async fn search(
             payload.channel_id.as_deref(),
             payload.user_id.as_deref(),
             30,
-            payload.before.map(|ts| {NaiveDateTime::from_pg_ts(&ts)}),
-            payload.after.map(|ts| {NaiveDateTime::from_pg_ts(&ts)})
+            payload.before.map(|ts| NaiveDateTime::from_pg_ts(&ts)),
+            payload.after.map(|ts| NaiveDateTime::from_pg_ts(&ts)),
         )
         .await?;
     Ok((
         StatusCode::OK,
-        Json(
-            models::SearchResultsResponse {
-                messages,
-                query: payload.query,
-            }
-        ).into_response()
+        Json(models::SearchResultsResponse {
+            messages,
+            query: payload.query,
+        })
+        .into_response(),
     ))
 }
 
@@ -121,13 +115,14 @@ pub async fn get_messages(
         .unwrap_or(sqlx::types::chrono::DateTime::UNIX_EPOCH.naive_utc());
     Ok((
         StatusCode::OK,
-        Json(
-            models::MessagesResponse {
-                messages,
-                before_msg_timestamp: oldest_message_timestamp.format("%Y-%m-%dT%H:%M:%S%.f").to_string(),
-                channel_id,
-            }
-        ).into_response(),
+        Json(models::MessagesResponse {
+            messages,
+            before_msg_timestamp: oldest_message_timestamp
+                .format("%Y-%m-%dT%H:%M:%S%.f")
+                .to_string(),
+            channel_id,
+        })
+        .into_response(),
     ))
 }
 
@@ -154,13 +149,12 @@ pub async fn get_replies(
         .await?;
     Ok((
         StatusCode::OK,
-        Json(
-            models::ThreadResponse {
-                messages,
-                parent_ts: message_data.ts.clone(),
-                channel_id: message_data.channel_id.clone(),
-                parent_user_id: message_data.user_id.clone(),
-            }
-        ).into_response()
+        Json(models::ThreadResponse {
+            messages,
+            parent_ts: message_data.ts.clone(),
+            channel_id: message_data.channel_id.clone(),
+            parent_user_id: message_data.user_id.clone(),
+        })
+        .into_response(),
     ))
 }

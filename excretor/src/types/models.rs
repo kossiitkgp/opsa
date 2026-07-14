@@ -1,39 +1,35 @@
-use serde::{Deserialize, Serialize};
-use crate::{
-    db::dbmodels::{DBChannel, DBParentMessage, DBReply, DBUser, DBSearchResult},
-};
-use sqlx::types::chrono;
+use crate::db::dbmodels::{DBChannel, DBParentMessage, DBReply, DBSearchResult, DBUser};
 use crate::db::tummy::SlackDateTime;
+use serde::{Deserialize, Serialize};
+use sqlx::types::chrono;
 
-
-// This private helper centralizes the logic for creating a User struct.
-// It now accepts references to avoid unnecessary cloning.
-fn build_user(
-    id: &str,
-    name: &str,
-    real_name: &str,
-    display_name: &str,
-    image_url: Option<&String>,
-    email: &str,
+struct UserData<'a> {
+    id: &'a str,
+    name: &'a str,
+    real_name: &'a str,
+    display_name: &'a str,
+    image_url: Option<&'a String>,
+    email: &'a str,
     deleted: bool,
     is_bot: bool,
-) -> User {
+}
+
+fn build_user(data: UserData<'_>) -> User {
     User {
-        id: id.to_string(),
-        name: name.to_string(),
-        real_name: real_name.to_string(),
-        display_name: display_name.to_string(),
-        // This logic now handles an Option<&String>.
-        image_url: image_url
+        id: data.id.to_string(),
+        name: data.name.to_string(),
+        real_name: data.real_name.to_string(),
+        display_name: data.display_name.to_string(),
+        image_url: data
+            .image_url
             .filter(|url| !url.is_empty())
             .map(|url| url.to_string())
             .unwrap_or_else(|| "/assets/avatar.png".into()),
-        email: email.to_string(),
-        deleted,
-        is_bot,
+        email: data.email.to_string(),
+        deleted: data.deleted,
+        is_bot: data.is_bot,
     }
 }
-
 
 /// Represents a message in a channel, including user and thread information.
 #[derive(Serialize, Deserialize, Debug)]
@@ -67,7 +63,6 @@ pub struct SearchResult {
     pub parent_message: Option<Box<Message>>,
 }
 
-
 /// Converts a `DBParentMessage` database model into a `Message`.
 impl From<DBParentMessage> for Message {
     fn from(item: DBParentMessage) -> Self {
@@ -89,16 +84,16 @@ impl From<DBParentMessage> for Message {
             } else {
                 0 // Not in a thread, so no thread count
             },
-            user: build_user(
-                &item.user_id,
-                &item.name,
-                &item.real_name,
-                &item.display_name,
-                item.image_url.as_ref(),
-                &item.email,
-                item.deleted,
-                item.is_bot,
-            ),
+            user: build_user(UserData {
+                id: &item.user_id,
+                name: &item.name,
+                real_name: &item.real_name,
+                display_name: &item.display_name,
+                image_url: item.image_url.as_ref(),
+                email: &item.email,
+                deleted: item.deleted,
+                is_bot: item.is_bot,
+            }),
         }
     }
 }
@@ -116,16 +111,16 @@ impl From<DBReply> for Message {
             parent_user_id: item.parent_user_id,
             formatted_timestamp: item.ts.human_format(),
             thread_count: 0, // Replies always have a thread_count of 0
-            user: build_user(
-                &item.user_id,
-                &item.name,
-                &item.real_name,
-                &item.display_name,
-                item.image_url.as_ref(),
-                &item.email,
-                item.deleted,
-                item.is_bot,
-            ),
+            user: build_user(UserData {
+                id: &item.user_id,
+                name: &item.name,
+                real_name: &item.real_name,
+                display_name: &item.display_name,
+                image_url: item.image_url.as_ref(),
+                email: &item.email,
+                deleted: item.deleted,
+                is_bot: item.is_bot,
+            }),
         }
     }
 }
@@ -151,19 +146,21 @@ impl From<DBSearchResult> for SearchResult {
             } else {
                 0
             },
-            user: build_user(
-                &item.user_id,
-                &item.name,
-                &item.real_name,
-                &item.display_name,
-                item.image_url.as_ref(),
-                &item.email,
-                item.deleted,
-                item.is_bot,
-            ),
+            user: build_user(UserData {
+                id: &item.user_id,
+                name: &item.name,
+                real_name: &item.real_name,
+                display_name: &item.display_name,
+                image_url: item.image_url.as_ref(),
+                email: &item.email,
+                deleted: item.deleted,
+                is_bot: item.is_bot,
+            }),
         };
 
-        let parent_message = if let (Some(parent_user_id), Some(parent_msg_text)) = (&item.parent_user_id, &item.parent_msg_text) {
+        let parent_message = if let (Some(parent_user_id), Some(parent_msg_text)) =
+            (&item.parent_user_id, &item.parent_msg_text)
+        {
             Some(Box::new(Message {
                 channel_id: message.channel_id.clone(),
                 channel_name: message.channel_name.clone(),
@@ -174,16 +171,16 @@ impl From<DBSearchResult> for SearchResult {
                 parent_user_id: None, // The parent doesn't have a parent
                 formatted_timestamp: item.thread_ts.unwrap().human_format(),
                 thread_count: item.cnt.unwrap_or(0),
-                user: build_user(
-                    parent_user_id,
-                    item.parent_name.as_ref().unwrap(),
-                    item.parent_real_name.as_ref().unwrap(),
-                    item.parent_display_name.as_ref().unwrap(),
-                    item.parent_image_url.as_ref(),
-                    item.parent_email.as_ref().unwrap(),
-                    item.parent_deleted.unwrap(),
-                    item.parent_is_bot.unwrap(),
-                ),
+                user: build_user(UserData {
+                    id: parent_user_id,
+                    name: item.parent_name.as_ref().unwrap(),
+                    real_name: item.parent_real_name.as_ref().unwrap(),
+                    display_name: item.parent_display_name.as_ref().unwrap(),
+                    image_url: item.parent_image_url.as_ref(),
+                    email: item.parent_email.as_ref().unwrap(),
+                    deleted: item.parent_deleted.unwrap(),
+                    is_bot: item.parent_is_bot.unwrap(),
+                }),
             }))
         } else {
             None
@@ -195,7 +192,6 @@ impl From<DBSearchResult> for SearchResult {
         }
     }
 }
-
 
 /// Represents a user in the system.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -222,17 +218,16 @@ pub struct User {
 /// This is now the single source of truth for converting a standalone DBUser.
 impl From<DBUser> for User {
     fn from(item: DBUser) -> Self {
-        // This also uses the helper to ensure consistency.
-        build_user(
-            &item.id,
-            &item.name,
-            &item.real_name,
-            &item.display_name,
-            item.image_url.as_ref(),
-            &item.email,
-            item.deleted,
-            item.is_bot,
-        )
+        build_user(UserData {
+            id: &item.id,
+            name: &item.name,
+            real_name: &item.real_name,
+            display_name: &item.display_name,
+            image_url: item.image_url.as_ref(),
+            email: &item.email,
+            deleted: item.deleted,
+            is_bot: item.is_bot,
+        })
     }
 }
 

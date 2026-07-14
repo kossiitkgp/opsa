@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
-use axum::response::{IntoResponse};
-
+use axum::response::IntoResponse;
 
 pub(in crate::api) struct AppError(color_eyre::eyre::Error);
 

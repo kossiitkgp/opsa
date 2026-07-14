@@ -1,3 +1,3 @@
-mod types;
+mod models;
 
-pub use self::types::{Channel, Message, User, SearchResult};
+pub use self::models::{Channel, Message, SearchResult, User};

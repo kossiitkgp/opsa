@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Channel } from "../types";
 import { Search, Calendar, CalendarCheck, X } from 'lucide-react';
 
@@ -62,30 +62,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         };
     }, []);
 
-    // Dynamic search effect - triggers search while typing when no suggestions are visible
-    useEffect(() => {
-        if (!enableDynamicSearch) return;
-
-        // Clear any existing timeout
-        if (dynamicSearchTimeoutRef.current) {
-            clearTimeout(dynamicSearchTimeoutRef.current);
-        }
-
-        // Only trigger dynamic search if there are no suggestions visible
-        if (suggestions.length === 0 && query.trim()) {
-            dynamicSearchTimeoutRef.current = setTimeout(() => {
-                handleSearchSubmit();
-            }, dynamicSearchDelay);
-        }
-
-        // Cleanup timeout on unmount
-        return () => {
-            if (dynamicSearchTimeoutRef.current) {
-                clearTimeout(dynamicSearchTimeoutRef.current);
-            }
-        };
-    }, [query, suggestions.length, beforeDate, afterDate, enableDynamicSearch, dynamicSearchDelay]);
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setQuery(value);
@@ -98,7 +74,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             const searchTerm = currentWord.substring(4).toLowerCase();
             const channelSuggestions = channels
                 .filter(c => c.name.toLowerCase().includes(searchTerm))
-                .map(c => ({ type: 'channel' as 'channel', name: c.name, id: c.id }));
+                .map(c => ({ type: 'channel' as const, name: c.name, id: c.id }));
             setSuggestions(channelSuggestions);
         } else if (currentWord.startsWith('from:@')) {
             const searchTerm = currentWord.substring(6).toLowerCase();
@@ -109,7 +85,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     (u.display_name && u.display_name.toLowerCase().includes(searchTerm))
                 )
                 .map(u => ({
-                    type: 'user' as 'user',
+                    type: 'user' as const,
                     name: u.name,
                     id: u.id,
                     displayName: u.display_name || u.real_name
@@ -137,7 +113,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         searchContainerRef.current?.querySelector('input')?.focus();
     };
 
-    const handleSearchSubmit = () => {
+    const handleSearchSubmit = useCallback(() => {
         // Clear any pending dynamic search
         if (dynamicSearchTimeoutRef.current) {
             clearTimeout(dynamicSearchTimeoutRef.current);
@@ -169,7 +145,31 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
         onSearch({ query: searchText, channelId, userId, before: parsedBeforeDate, after: parsedAfterDate });
         setSuggestions([]);
-    };
+    }, [afterDate, beforeDate, channels, onSearch, query, users]);
+
+    // Dynamic search effect - triggers search while typing when no suggestions are visible
+    useEffect(() => {
+        if (!enableDynamicSearch) return;
+
+        // Clear any existing timeout
+        if (dynamicSearchTimeoutRef.current) {
+            clearTimeout(dynamicSearchTimeoutRef.current);
+        }
+
+        // Only trigger dynamic search if there are no suggestions visible
+        if (suggestions.length === 0 && query.trim()) {
+            dynamicSearchTimeoutRef.current = setTimeout(() => {
+                handleSearchSubmit();
+            }, dynamicSearchDelay);
+        }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (dynamicSearchTimeoutRef.current) {
+                clearTimeout(dynamicSearchTimeoutRef.current);
+            }
+        };
+    }, [dynamicSearchDelay, enableDynamicSearch, handleSearchSubmit, query, suggestions.length]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {

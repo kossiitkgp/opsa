@@ -1,0 +1,114 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                m.channel_id,\n                ch.name AS channel_name, -- Added the channel name here\n                m.user_id,\n                m.msg_text,\n                m.ts,\n                m.thread_ts,\n                m.parent_user_id,\n                u.id,\n                u.name,\n                u.real_name,\n                u.display_name,\n                u.image_url,\n                u.email,\n                u.deleted,\n                u.is_bot,\n                c.cnt\n            FROM\n                messages AS m\n            INNER JOIN users AS u ON u.id = m.user_id\n            INNER JOIN channels AS ch ON ch.id = m.channel_id -- Joined the channels table\n            LEFT JOIN (\n                SELECT\n                    COUNT(*) as cnt,\n                    thread_ts as join_ts,\n                    parent_user_id\n                FROM\n                    messages\n                WHERE\n                    channel_id = $1\n                GROUP BY\n                    join_ts,\n                    parent_user_id\n            ) AS c ON m.ts = c.join_ts AND m.user_id = c.parent_user_id\n            WHERE\n                m.channel_id = $1 AND m.ts < $2 AND m.parent_user_id = ''\n            ORDER BY\n                ts DESC\n            LIMIT $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "msg_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "thread_ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "parent_user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "real_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "image_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "deleted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "is_bot",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "cnt",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamp",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "067912972667664bc8447a7141da5235b25b7775fffdc81d88a8fbba646e3fb0"
+}
